@@ -189,10 +189,25 @@ display(con_gps.groupby("lugar").agg(fotos=("ruta", "count"), primera=("fecha", 
 
 # COMMAND ----------
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageCms, ImageOps
 import pillow_heif
 
 pillow_heif.register_heif_opener()
+
+# Las fotos de iPhone vienen en Display P3. El navegador asume sRGB, así que sin
+# convertir los colores se ven apagados.
+SRGB = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB"))
+
+
+def miniatura_srgb(contenido, lado=360):
+    with Image.open(io.BytesIO(contenido)) as original:
+        icc = original.info.get("icc_profile")
+        imagen = ImageOps.exif_transpose(original).convert("RGB")
+    if icc:
+        perfil = ImageCms.ImageCmsProfile(io.BytesIO(icc))
+        imagen = ImageCms.profileToProfile(imagen, perfil, SRGB, outputMode="RGB")
+    imagen.thumbnail((lado, lado))
+    return imagen
 
 ordenadas = metadata.sort_values("fecha", na_position="last").reset_index(drop=True)
 paso = max(1, len(ordenadas) // MINIATURAS)
@@ -200,11 +215,8 @@ rutas_muestra = ordenadas["ruta"].iloc[::paso].head(MINIATURAS).tolist()
 
 html = ""
 for fila in imagenes_df.filter(F.col("path").isin(rutas_muestra)).select("path", "content").collect():
-    with Image.open(io.BytesIO(fila["content"])) as imagen:
-        imagen = ImageOps.exif_transpose(imagen)
-        imagen.thumbnail((360, 360))
-        buffer = io.BytesIO()
-        imagen.convert("RGB").save(buffer, format="JPEG", quality=80)
+    buffer = io.BytesIO()
+    miniatura_srgb(fila["content"]).save(buffer, format="JPEG", quality=80)
     codificada = base64.b64encode(buffer.getvalue()).decode()
     nombre = fila["path"].rsplit("/", 1)[-1]
     html += (

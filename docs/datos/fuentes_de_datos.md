@@ -50,17 +50,29 @@ Si un cambio de precio histórico es intencional, por ejemplo una corrección de
 
 ## 2. Fotos de dispensadores
 
-**Dónde están:** en el bucket de la external location `xloc-raw`, que es solo de lectura. En el repo del curso hay 5 fotos de prueba, en [Casos-Estudio/Images](https://github.com/SergioAle210/ML-Engineering/tree/main/Casos-Estudio/Images), pero el bucket debería tener más.
+**Dónde están:** en el bucket de la external location `xloc-raw`, que es solo de lectura.
 
-**Qué no sabemos todavía:**
+### Resultado de la exploración (2026-11-12)
 
-1. Cuántas fotos hay.
-2. En qué formatos están (HEIC, JPG u otros).
-3. De qué fechas son.
-4. De cuántas estaciones distintas son.
-5. Si todas muestran el mismo tipo de dispensador.
+Se obtuvo con el job `gas_price_exploracion`, que corre el notebook `databricks/notebooks/00_exploracion_raw.py`. No forma parte del pipeline y no escribe nada.
 
-Para responderlo está el notebook `databricks/notebooks/00_exploracion_raw.py`. Es un job de investigación, no forma parte del pipeline y no escribe nada. Lista los archivos, lee el EXIF (fecha, dispositivo y GPS) y muestra algunas miniaturas.
+| Pregunta | Resultado |
+|---|---|
+| Cantidad | 110 archivos, 169 MB en total |
+| Formatos | 109 HEIC y 1 JPG |
+| Carpetas | `img/` (38), `img/2025/` (31), `img/2024/` (24) y `img/2023/` (17) |
+| Metadatos | Las 110 fotos tienen fecha y GPS en el EXIF. Ninguna falló al abrirse |
+| Fechas de toma | Del 14 de diciembre de 2022 al 8 de noviembre de 2026, con 1 a 6 fotos casi todos los meses |
+| Dispositivos | iPhone 14 (91) y iPhone XS (19) |
+| Lugares | Al menos 13 lugares distintos, redondeando el GPS a unos 100 metros. Uno concentra 63 fotos y otro 17. El resto tiene 6 fotos o menos |
+| Perfil de color | Display P3, el de los iPhone. Hay que convertir a sRGB para mostrar las fotos |
+
+**Hallazgos que afectan el diseño:**
+
+1. **La carpeta no indica el año de la foto.** `img/2023/` tiene fotos de diciembre de 2022. La fecha siempre sale del EXIF.
+2. **El monto de la carga no es fijo.** Las miniaturas muestran Q100, Q200 y Q300. La Actividad 2 usaba Q150 como valor de referencia para validar el OCR, y eso ya no aplica.
+3. **Hay más de un tipo de dispensador.** La mayoría son de la misma marca, pero al menos uno es de otra marca con otra distribución de pantallas. El OCR no puede depender de posiciones fijas.
+4. **110 fotos en casi 4 años no alcanzan para entrenar** un modelo semanal. Se confirma que el Excel del MEM es la fuente principal. Las fotos sirven para comparar estaciones contra el promedio nacional, sobre todo la estación con 63 fotos.
 
 **Qué aporta cada foto** (según el análisis de negocio y la Actividad 2):
 

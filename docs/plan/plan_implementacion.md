@@ -46,13 +46,13 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 0 | Revisar permisos de las external locations | Ricardo | Hecho |
 | 0 | Crear el repo propio y mover la documentación | Ricardo | Hecho |
 | 0 | Pedir al catedrático desactivar "Limit to read-only use" en bronce y plata, y otorgar `CREATE MANAGED STORAGE` en bronce, plata y oro | | Pendiente |
-| 1 | Bundle con el job de exploración y el job del pipeline con tareas vacías | Ricardo | Hecho, falta desplegar |
-| 1 | Workflows de plan con comentario desplegable y de despliegue en `main` | Ricardo | Hecho, falta probar |
-| 1 | Generar el token de Databricks y guardar `DATABRICKS_HOST` y `DATABRICKS_TOKEN` en GitHub | | Pendiente |
+| 1 | Bundle con el job de exploración y el job del pipeline con tareas vacías | Ricardo | Hecho |
+| 1 | Workflows de plan con comentario desplegable y de despliegue en `main` | Ricardo | Hecho |
+| 1 | Generar el token de Databricks y guardar `DATABRICKS_HOST` y `DATABRICKS_TOKEN` en GitHub | Ricardo | Hecho |
 | 1 | Primer pull request: revisar el comentario con el plan | Ricardo | Hecho |
 | 1 | Crear el ruleset de `main` con el check `plan` obligatorio | | Pendiente |
-| 1 | Merge a `main`: confirmar que los dos jobs aparecen en el workspace | | Pendiente |
-| 1 | Correr el job `gas_price_exploracion` y documentar cuántas fotos hay, de qué fechas y de qué lugares | | Pendiente |
+| 1 | Merge a `main`: confirmar que los dos jobs aparecen en el workspace | Ricardo | Hecho |
+| 1 | Correr el job `gas_price_exploracion` y documentar cuántas fotos hay, de qué fechas y de qué lugares | Ricardo | Hecho. Ver [fuentes_de_datos.md](../datos/fuentes_de_datos.md) |
 | 1 | Prueba de permisos: crear el catálogo `gas_price` | Ricardo | Hecho |
 | 1 | Prueba de permisos: esquema con ubicación en el bucket de bronce | Ricardo | Hecho: falló, `xloc-cusn` es de solo lectura |
 | 1 | Revisar si `xloc-ag` y `xloc-au` también son de solo lectura | Ricardo | Hecho: plata es de solo lectura, oro permite escritura |
@@ -86,3 +86,4 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 2026-11-11 | Se definió el horizonte del modelo, el almacenamiento por esquema y la recomendación de usar bundles |
 | 2026-11-11 | Se adoptaron los bundles con un solo ambiente compartido y se descartó Terraform |
 | 2026-11-11 | Se creó el repo propio, se movió la documentación y se armaron el bundle y los workflows de plan y despliegue |
+| 2026-11-12 | Primer despliegue por CI: los dos jobs quedaron en el workspace. Se corrió la exploración: 110 fotos de diciembre 2022 a noviembre 2026 |
