@@ -29,21 +29,34 @@ Fuente: [documentación de comandos de bundles](https://docs.databricks.com/aws/
 Para que nadie tenga una versión distinta desplegada:
 
 1. **Solo el CI despliega**, y solo desde `main`. El workflow de despliegue solo corre al hacer merge a `main`. Nadie corre `databricks bundle deploy` desde su computadora.
-2. **El bundle tiene un solo destino**, `prod`. Sus archivos y su estado viven en `/Workspace/Shared/.bundle/gas_price/prod`, visibles para todo el equipo.
+2. **El bundle tiene un solo destino**, `prod`. Sus archivos y su estado viven en `/Workspace/Shared/.bundle/gas_price/prod`, visibles para todo el equipo. El grupo `users` tiene `CAN_MANAGE` sobre los jobs, declarado en `databricks.yml`. Solo se suben los notebooks y la configuración: `docs/`, `data/` y `.github/` quedan fuera con `sync.exclude`.
 3. **Los cambios llegan por pull request.** Un ruleset de GitHub sobre `main` exige que el check `plan` esté en verde para hacer merge. No exige aprobaciones. Cuando exista el workflow de tests, su check se agrega a la lista.
 4. **Un despliegue a la vez:** el workflow de despliegue usa `concurrency` de GitHub Actions para no correr dos despliegues juntos.
 5. **Una corrida a la vez:** los jobs tienen `max_concurrent_runs: 1`. Si dos personas lanzan el mismo job, la segunda corrida espera. Ayuda también con el límite de 5 tareas de Free Edition.
 
 No se usa el modo producción de los bundles. Según la [documentación de modos de despliegue](https://docs.databricks.com/aws/en/dev-tools/bundles/deployment-modes), ese modo exige que la rama actual coincida con `main`, y el plan de los pull requests corre en otra rama.
 
-**Cómo prueba un cambio un desarrollador antes del merge:**
+## Cómo prueba un cambio un desarrollador
 
-1. Clona el repo como Git folder en el workspace, en su rama. Si Free Edition no lo permite, importa el notebook de su rama a su carpeta personal.
-2. Abre el notebook que está cambiando y lo corre de forma interactiva.
-3. Corre `databricks bundle validate` y `databricks bundle plan` en su computadora. Ninguno de los dos cambia nada.
-4. Abre el pull request y revisa el plan que publica el CI.
+**Configuración, una sola vez por persona:**
 
-Los notebooks escriben con `MERGE` por llave. Si alguien corre un notebook de prueba sobre las tablas compartidas, no duplica datos.
+1. Ser colaborador del repo en GitHub, con permiso de escritura.
+2. En Databricks: clic en el usuario, **Settings**, **Linked accounts**, **Add Git credential**, proveedor **GitHub**, **Link Git account**.
+3. Clonar el repo en su carpeta: **Workspace**, su carpeta de usuario, **Create**, **Git folder**, URL `https://github.com/chuy-zip/MLOPS_GAS_PRICES_PROJECT.git`.
+
+La app de Databricks en GitHub ya está instalada en el repo. Eso lo hace una sola vez el dueño del repo. Fuente: [credenciales de Git](https://docs.databricks.com/aws/en/repos/get-access-tokens-from-git-provider).
+
+**Ciclo de trabajo:**
+
+1. En el notebook, clic en el botón con el nombre de la rama y **Create Branch**.
+2. Editar y correr de forma interactiva solo las celdas que se están probando.
+3. Cuando funcione, en el mismo diálogo de Git: mensaje y **Commit & Push**.
+4. Abrir el pull request en GitHub y revisar el plan que publica el CI.
+5. Después del merge, correr el job del pipeline para que las tablas queden como las deja el código de `main`.
+
+**No desplegar desde Databricks.** Al abrir un notebook de la carpeta Git aparece el aviso "This file is part of a bundle. Switch to associated bundle". La vista del bundle tiene un botón para desplegar. No se usa: el único destino es `prod`, y desplegar desde una rama pondría código sin revisar en el ambiente compartido.
+
+**Tablas compartidas.** No hay esquemas por persona. Las pruebas escriben sobre los esquemas de `gas_price`, por eso cada tabla tiene un solo responsable a la vez, asignado en el plan. Los notebooks escriben con `MERGE` por llave, así que repetir una prueba no duplica datos.
 
 ## Workflows de GitHub Actions
 
