@@ -1,0 +1,25 @@
+bundle:
+  name: gas_price
+
+include:
+  - resources/*.yml
+
+variables:
+  catalogo:
+    description: Catálogo de Unity Catalog del proyecto
+    default: gas_price
+  esquema_bronze:
+    description: Esquema de la capa de bronce
+    default: bronze
+  esquema_silver:
+    description: Esquema de la capa de plata
+    default: silver
+  esquema_gold:
+    description: Esquema de la capa de oro
+    default: gold
+
+targets:
+  prod:
+    default: true
+    workspace:
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}

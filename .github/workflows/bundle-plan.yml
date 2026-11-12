@@ -1,0 +1,72 @@
+name: Bundle plan
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: bundle-plan-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: databricks/setup-cli@main
+
+      - name: Validar y generar el plan
+        id: plan
+        run: |
+          set +e
+          { databricks bundle validate -t prod && databricks bundle plan -t prod; } > plan.txt 2>&1
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          cat plan.txt
+
+      - name: Publicar el plan en el pull request
+        uses: actions/github-script@v7
+        env:
+          EXIT_CODE: ${{ steps.plan.outputs.exit_code }}
+        with:
+          script: |
+            const fs = require('fs');
+            const marca = '<!-- bundle-plan -->';
+            const plan = fs.readFileSync('plan.txt', 'utf8').slice(0, 60000);
+            const ok = process.env.EXIT_CODE === '0';
+            const sha = context.payload.pull_request.head.sha.substring(0, 7);
+            const fence = '```';
+            const body = [
+              marca,
+              `### Bundle plan (prod): ${ok ? 'sin errores' : 'con errores'}`,
+              '',
+              '<details><summary>Ver plan</summary>',
+              '',
+              fence,
+              plan,
+              fence,
+              '',
+              '</details>',
+              '',
+              `Commit ${sha}`,
+            ].join('\n');
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const { data: comentarios } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const previo = comentarios.find(c => c.body.includes(marca));
+            if (previo) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: previo.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: Fallar si el plan tuvo errores
+        if: steps.plan.outputs.exit_code != '0'
+        run: exit 1

@@ -218,3 +218,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Databricks bundles (cache local)
+.databricks/
+
+# MLflow local
+mlruns/
+mlartifacts/
+mlflow.db
