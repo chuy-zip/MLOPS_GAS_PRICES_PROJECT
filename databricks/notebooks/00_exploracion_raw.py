@@ -1,4 +1,11 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "6"
+# dependencies = [
+#   "pillow-heif",
+# ]
+# ///
 # MAGIC %md
 # MAGIC # 00 Exploración del bucket raw
 # MAGIC
@@ -182,6 +189,45 @@ display(con_gps.groupby("lugar").agg(fotos=("ruta", "count"), primera=("fecha", 
 
 # COMMAND ----------
 
+ESQUEMA_ETIQUETAS = "ruta string, grupo string, etiqueta string, ejemplo string"
+
+
+def listar_etiquetas(lotes):
+    import pillow_heif
+    from PIL import ExifTags, Image
+
+    pillow_heif.register_heif_opener()
+    for lote in lotes:
+        filas = []
+        for ruta, contenido in zip(lote["path"], lote["content"]):
+            try:
+                with Image.open(io.BytesIO(contenido)) as imagen:
+                    exif = imagen.getexif()
+                    grupos = {"principal": exif, "exif": exif.get_ifd(0x8769), "gps": exif.get_ifd(0x8825)}
+                    for grupo, datos in grupos.items():
+                        nombres = ExifTags.GPSTAGS if grupo == "gps" else ExifTags.TAGS
+                        for codigo, valor in datos.items():
+                            if grupo == "principal" and codigo in (0x8769, 0x8825):
+                                continue
+                            filas.append((ruta, grupo, nombres.get(codigo, hex(codigo)), str(valor)[:60]))
+            except Exception as e:
+                filas.append((ruta, "error", type(e).__name__, str(e)[:60]))
+        yield pd.DataFrame(filas, columns=["ruta", "grupo", "etiqueta", "ejemplo"])
+
+
+etiquetas = imagenes_df.select("path", "content").mapInPandas(listar_etiquetas, schema=ESQUEMA_ETIQUETAS).toPandas()
+total = etiquetas["ruta"].nunique()
+resumen = (
+    etiquetas.groupby(["grupo", "etiqueta"])
+    .agg(fotos=("ruta", "nunique"), ejemplo=("ejemplo", "first"))
+    .reset_index()
+)
+resumen["cobertura_pct"] = (resumen["fotos"] / total * 100).round(1)
+display(resumen.sort_values(["grupo", "cobertura_pct"], ascending=[True, False]))
+
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## 3. Muestra visual
 # MAGIC
@@ -220,7 +266,7 @@ for fila in imagenes_df.filter(F.col("path").isin(rutas_muestra)).select("path",
     codificada = base64.b64encode(buffer.getvalue()).decode()
     nombre = fila["path"].rsplit("/", 1)[-1]
     html += (
-        f'<figure style="display:inline-block;margin:6px;text-align:center">'
+        f'<figure class="nodarkmode" style="display:inline-block;margin:6px;text-align:center">'
         f'<img src="data:image/jpeg;base64,{codificada}"/>'
         f'<figcaption style="font-size:11px">{nombre}</figcaption></figure>'
     )
@@ -229,7 +275,72 @@ displayHTML(html)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 4. Conclusiones
+# MAGIC ## 4. Verificación de integridad
+
+# COMMAND ----------
+
+import hashlib
+
+ESPERADO = {
+    "IMG_8271.HEIC": "ef3209b16913494630a1c3378bd37440dfb73f44c371e545df93ab17548ce425",
+    "IMG_8286.HEIC": "8db7c5a904471021cdf3591e9c53158501021236d720d9b709b13489f1c55f3d",
+}
+filas = (
+    spark.read.format("binaryFile")
+    .load([url_raw + "img/" + nombre for nombre in ESPERADO])
+    .select("path", "length", "content")
+    .collect()
+)
+
+html = ""
+for fila in filas:
+    nombre = fila["path"].rsplit("/", 1)[-1]
+    igual = hashlib.sha256(fila["content"]).hexdigest() == ESPERADO[nombre]
+    print(nombre, "| bytes:", fila["length"], "| idéntica a la copia del repo del curso:", igual)
+
+    with Image.open(io.BytesIO(fila["content"])) as original:
+        sin_convertir = ImageOps.exif_transpose(original).convert("RGB")
+    sin_convertir.thumbnail((500, 500))
+    convertida = miniatura_srgb(fila["content"], lado=500)
+
+    for etiqueta, imagen in [("sin convertir", sin_convertir), ("convertida a sRGB", convertida)]:
+        buffer = io.BytesIO()
+        imagen.save(buffer, format="JPEG", quality=90)
+        b64 = base64.b64encode(buffer.getvalue()).decode()
+        html += (
+            f'<figure class="nodarkmode" style="display:inline-block;margin:6px;text-align:center">'
+            f'<img src="data:image/jpeg;base64,{b64}"/>'
+            f'<figcaption style="font-size:12px">{nombre}, {etiqueta}</figcaption></figure>'
+        )
+displayHTML(html)
+
+
+# COMMAND ----------
+
+# Fotos repetidas por contenido, aunque tengan otro nombre. Define la llave de bronze.
+repetidas = (
+    imagenes_df.select("path", F.sha2("content", 256).alias("sha256"))
+    .groupBy("sha256")
+    .agg(F.count("*").alias("copias"), F.collect_list("path").alias("rutas"))
+    .filter("copias > 1")
+)
+print("Contenidos repetidos:", repetidas.count())
+display(repetidas)
+
+
+# COMMAND ----------
+
+# Orientación y momento del día: condiciones que afectan al OCR.
+metadata["orientacion"] = (metadata["ancho"] > metadata["alto"]).map({True: "horizontal", False: "vertical"})
+metadata["momento"] = pd.cut(metadata["fecha"].dt.hour, bins=[0, 6, 18, 24], right=False,
+                             labels=["madrugada", "día", "noche"])
+display(metadata.groupby(["orientacion", "momento"], observed=True).size().rename("fotos").reset_index())
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 5. Conclusiones
 # MAGIC
 # MAGIC Completar después de correr el notebook y copiar al documento `docs/datos/fuentes_de_datos.md`:
 # MAGIC
