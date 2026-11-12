@@ -19,7 +19,7 @@ jobs:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: databricks/setup-cli@main
 
@@ -32,7 +32,7 @@ jobs:
           cat plan.txt
 
       - name: Publicar el plan en el pull request
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           EXIT_CODE: ${{ steps.plan.outputs.exit_code }}
         with:

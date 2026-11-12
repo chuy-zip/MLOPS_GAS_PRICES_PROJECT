@@ -4,6 +4,19 @@ bundle:
 include:
   - resources/*.yml
 
+# Databricks solo necesita los notebooks. El Excel se lee desde el repo público.
+sync:
+  exclude:
+    - docs/**
+    - data/**
+    - .github/**
+    - README.md
+
+# El bundle vive en /Workspace/Shared a propósito: es un ambiente compartido por el equipo.
+permissions:
+  - level: CAN_MANAGE
+    group_name: users
+
 variables:
   catalogo:
     description: Catálogo de Unity Catalog del proyecto
