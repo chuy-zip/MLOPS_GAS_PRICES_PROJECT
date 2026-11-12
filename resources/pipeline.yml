@@ -1,0 +1,56 @@
+resources:
+  jobs:
+    gas_price_pipeline:
+      name: gas_price_pipeline
+      description: Pipeline de raw a oro, entrenamiento y publicación de la referencia. Sin calendario.
+      max_concurrent_runs: 1
+      tags:
+        proyecto: gas_price
+      parameters:
+        - name: catalogo
+          default: ${var.catalogo}
+        - name: esquema_bronze
+          default: ${var.esquema_bronze}
+        - name: esquema_silver
+          default: ${var.esquema_silver}
+        - name: esquema_gold
+          default: ${var.esquema_gold}
+      tasks:
+        - task_key: ingesta_imagenes
+          notebook_task:
+            notebook_path: ../databricks/notebooks/10_ingesta_imagenes.py
+
+        - task_key: ingesta_mem
+          notebook_task:
+            notebook_path: ../databricks/notebooks/11_ingesta_mem.py
+
+        - task_key: silver_mem
+          depends_on:
+            - task_key: ingesta_mem
+          notebook_task:
+            notebook_path: ../databricks/notebooks/20_silver_mem.py
+
+        - task_key: silver_imagenes
+          depends_on:
+            - task_key: ingesta_imagenes
+          notebook_task:
+            notebook_path: ../databricks/notebooks/21_silver_imagenes.py
+
+        - task_key: gold
+          depends_on:
+            - task_key: silver_mem
+            - task_key: silver_imagenes
+          notebook_task:
+            notebook_path: ../databricks/notebooks/30_gold.py
+
+        - task_key: entrenamiento
+          depends_on:
+            - task_key: gold
+          notebook_task:
+            notebook_path: ../databricks/notebooks/40_entrenamiento.py
+
+        - task_key: publicar_referencia
+          depends_on:
+            - task_key: entrenamiento
+          notebook_task:
+            notebook_path: ../databricks/notebooks/50_publicar_referencia.py

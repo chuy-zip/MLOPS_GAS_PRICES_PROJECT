@@ -1,0 +1,12 @@
+resources:
+  jobs:
+    gas_price_exploracion:
+      name: gas_price_exploracion
+      description: Exploración del bucket raw. Se corre a mano y no escribe nada.
+      max_concurrent_runs: 1
+      tags:
+        proyecto: gas_price
+      tasks:
+        - task_key: exploracion_raw
+          notebook_task:
+            notebook_path: ../databricks/notebooks/00_exploracion_raw.py
