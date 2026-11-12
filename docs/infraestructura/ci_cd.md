@@ -30,7 +30,7 @@ Para que nadie tenga una versión distinta desplegada:
 
 1. **Solo el CI despliega**, y solo desde `main`. El workflow de despliegue solo corre al hacer merge a `main`. Nadie corre `databricks bundle deploy` desde su computadora.
 2. **El bundle tiene un solo destino**, `prod`. Sus archivos y su estado viven en `/Workspace/Shared/.bundle/gas_price/prod`, visibles para todo el equipo.
-3. **Los cambios llegan por pull request**, con el plan y los tests del CI a la vista. No se activa branch protection en GitHub: es un acuerdo del equipo.
+3. **Los cambios llegan por pull request.** Un ruleset de GitHub sobre `main` exige que el check `plan` esté en verde para hacer merge. No exige aprobaciones. Cuando exista el workflow de tests, su check se agrega a la lista.
 4. **Un despliegue a la vez:** el workflow de despliegue usa `concurrency` de GitHub Actions para no correr dos despliegues juntos.
 5. **Una corrida a la vez:** los jobs tienen `max_concurrent_runs: 1`. Si dos personas lanzan el mismo job, la segunda corrida espera. Ayuda también con el límite de 5 tareas de Free Edition.
 

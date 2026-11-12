@@ -20,7 +20,7 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 2026-11-11 | GitHub Actions solo valida y dispara. El procesamiento ocurre en Databricks | Procesar datos fuera de la plataforma rompe la trazabilidad y el linaje |
 | 2026-11-11 | La exploración de las fotos es un job aparte, fuera del pipeline | Primero hay que conocer los datos para diseñar la carga |
 | 2026-11-11 | El proyecto vive en su propio repo público, `chuy-zip/MLOPS_GAS_PRICES_PROJECT` | Separa el CI, los secretos y el historial del repo del curso. Al ser público, los notebooks pueden leer archivos del repo por URL |
-| 2026-11-11 | Sin branch protection. Los cambios llegan por pull request con el plan y los tests del CI | Acuerdo del equipo. Es suficiente para un proyecto de una semana |
+| 2026-11-12 | Ruleset en `main` que exige el check `plan` en verde para hacer merge. Sin aprobaciones obligatorias | Evita que un bundle roto llegue a `main` y rompa el despliegue, sin frenar al equipo con revisiones. Reemplaza la decisión anterior de no proteger `main` |
 | 2026-11-11 | Primero se valida la infraestructura (bundle y CI) y después se explora el bucket | El job de exploración es la primera prueba de punta a punta del despliegue |
 | 2026-11-11 | Catálogo `gas_price` con esquemas `bronze`, `silver` y `gold`. El catálogo ya está creado | La cuenta de Databricks es del equipo, así que se pudo crear sin pedir permiso |
 | 2026-11-11 | Mientras no se pueda escribir en los buckets, las tablas usan el almacenamiento por defecto | `xloc-cusn` es de solo lectura. No se bloquea el proyecto esperando al catedrático |
@@ -49,7 +49,8 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 1 | Bundle con el job de exploración y el job del pipeline con tareas vacías | Ricardo | Hecho, falta desplegar |
 | 1 | Workflows de plan con comentario desplegable y de despliegue en `main` | Ricardo | Hecho, falta probar |
 | 1 | Generar el token de Databricks y guardar `DATABRICKS_HOST` y `DATABRICKS_TOKEN` en GitHub | | Pendiente |
-| 1 | Primer pull request: revisar el comentario con el plan | | Pendiente |
+| 1 | Primer pull request: revisar el comentario con el plan | Ricardo | Hecho |
+| 1 | Crear el ruleset de `main` con el check `plan` obligatorio | | Pendiente |
 | 1 | Merge a `main`: confirmar que los dos jobs aparecen en el workspace | | Pendiente |
 | 1 | Correr el job `gas_price_exploracion` y documentar cuántas fotos hay, de qué fechas y de qué lugares | | Pendiente |
 | 1 | Prueba de permisos: crear el catálogo `gas_price` | Ricardo | Hecho |
