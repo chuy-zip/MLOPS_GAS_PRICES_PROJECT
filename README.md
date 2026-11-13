@@ -31,6 +31,7 @@ flowchart LR
 |---|---|
 | `databricks.yml`, `resources/` | Bundle de Databricks: jobs y sus tareas |
 | `databricks/notebooks/` | Un notebook por tarea del pipeline |
+| `databricks/sql/tablas.sql` | Columnas y tipos de todas las tablas. Para cambiar una tabla, ver [Cómo cambiar una tabla](docs/datos/esquemas_medallion.md#cómo-cambiar-una-tabla) |
 | `src/gas_price/` | Código compartido: lectores del MEM y la EIA, variables y modelo |
 | `tests/` | Tests del paquete y de "no empeorar" los datos |
 | `scripts/` | Actualizar la EIA y evaluar el modelo en local |

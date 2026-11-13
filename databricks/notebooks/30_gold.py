@@ -10,7 +10,7 @@
 # MAGIC | `gold.features_semanales` | Una fila por lunes y combustible, con las variables del modelo y la etiqueta |
 # MAGIC | `gold.referencia_actual` | El último precio oficial por combustible y el rango de "buen precio" |
 # MAGIC
-# MAGIC Las tablas se reescriben completas en cada corrida.
+# MAGIC Las tablas se reescriben completas en cada corrida. Sus columnas y tipos están en `databricks/sql/tablas.sql`.
 
 # COMMAND ----------
 
@@ -37,13 +37,17 @@ oro = f"{catalogo}.{esquema_gold}"
 
 
 def escribir(datos, tabla):
-    (
-        spark.createDataFrame(datos)
-        .write.mode("overwrite")
-        .option("overwriteSchema", "true")
-        .saveAsTable(f"{oro}.{tabla}")
-    )
-    print(f"{oro}.{tabla}: {len(datos)} filas")
+    """Reemplaza los datos de una tabla definida en databricks/sql/tablas.sql, sin cambiar su definición.
+
+    Las columnas se ordenan como en la tabla. Si falta alguna o sobra alguna, la escritura falla.
+    """
+    destino = f"{oro}.{tabla}"
+    columnas = spark.table(destino).columns
+    sobrantes = set(datos.columns) - set(columnas)
+    if sobrantes:
+        raise ValueError(f"{destino}: columnas que no están en tablas.sql: {sorted(sobrantes)}")
+    spark.createDataFrame(datos[columnas]).write.insertInto(destino, overwrite=True)
+    print(f"{destino}: {len(datos)} filas")
 
 # COMMAND ----------
 

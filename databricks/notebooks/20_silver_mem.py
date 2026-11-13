@@ -56,11 +56,8 @@ esquema = """
     fecha DATE, combustible STRING, precio_gtq_galon DOUBLE,
     tipo_cambio DOUBLE, regimen_fiscal STRING, _archivo_origen STRING
 """
-(
-    spark.createDataFrame(largo, schema=esquema)
-    .write.mode("overwrite")
-    .option("overwriteSchema", "true")
-    .saveAsTable(DESTINO)
-)
+# La tabla la define databricks/sql/tablas.sql. insertInto con overwrite reemplaza los datos sin cambiar la definición.
+filas = spark.createDataFrame(largo, schema=esquema)
+filas.select(*spark.table(DESTINO).columns).write.insertInto(DESTINO, overwrite=True)
 
 display(spark.table(DESTINO).groupBy("combustible").agg(F.count("*").alias("dias"), F.min("fecha"), F.max("fecha")))

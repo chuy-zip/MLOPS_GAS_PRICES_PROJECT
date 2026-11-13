@@ -62,11 +62,8 @@ for ultima in ultimas:
 # COMMAND ----------
 
 esquema = "fecha DATE, serie STRING, precio_usd_galon DOUBLE, _archivo_origen STRING"
-(
-    spark.createDataFrame(pd.concat(partes, ignore_index=True), schema=esquema)
-    .write.mode("overwrite")
-    .option("overwriteSchema", "true")
-    .saveAsTable(DESTINO)
-)
+# La tabla la define databricks/sql/tablas.sql. insertInto con overwrite reemplaza los datos sin cambiar la definición.
+filas = spark.createDataFrame(pd.concat(partes, ignore_index=True), schema=esquema)
+filas.select(*spark.table(DESTINO).columns).write.insertInto(DESTINO, overwrite=True)
 
 display(spark.table(DESTINO).groupBy("serie").agg(F.count("*").alias("dias"), F.min("fecha"), F.max("fecha")))

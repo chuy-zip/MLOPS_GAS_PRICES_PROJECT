@@ -34,6 +34,65 @@ Un esquema por capa. Cada esquema usa su bucket como ubicación administrada, as
 
 En el resto de los documentos, `bronze.tabla` abrevia la tabla en el esquema de bronce, y lo mismo para plata y oro.
 
+## Definición de las tablas
+
+Las columnas y los tipos de todas las tablas están en `databricks/sql/tablas.sql`. Es la fuente de verdad, y las tablas de este documento la resumen.
+
+1. El job `gas_price_setup` corre ese archivo con `CREATE TABLE IF NOT EXISTS`. Lo lanza el CI después de cada despliegue, así que las tablas nuevas existen apenas se hace merge.
+2. Las tareas del pipeline escriben con `insertInto`, que respeta la definición de la tabla. Si una tarea produce columnas distintas, la escritura falla en lugar de cambiar la tabla.
+3. El test `tests/test_tablas_sql.py` compara el archivo con las columnas que produce el código de `src/`. Si no coinciden, el PR queda en rojo.
+4. `CREATE TABLE IF NOT EXISTS` no modifica una tabla que ya existe. Los cambios a tablas existentes se aplican a mano, con los pasos de la siguiente sección.
+
+## Cómo cambiar una tabla
+
+**Importante:** entre el merge y el paso manual en Databricks, la tarea que escribe esa tabla falla, porque el código y la tabla no coinciden. Hacer el paso manual apenas termine el despliegue, y avisar al equipo que no corra el pipeline mientras tanto.
+
+### Agregar una columna
+
+Funciona en cualquier capa y no borra datos. Ejemplo: agregar `region STRING` a `gold.precios_diarios`.
+
+1. Crear una rama.
+2. Cambiar el código para que produzca la columna. Agregarla **al final** de las columnas que ya existen.
+3. Agregarla también **al final** de esa tabla en `databricks/sql/tablas.sql`, con su tipo y un comentario:
+
+   ```sql
+     n_fotos INT COMMENT '...',
+     region STRING COMMENT 'Región de la estación'
+   ```
+
+4. Correr `pytest`. `tests/test_tablas_sql.py` revisa que el archivo y el código tengan las mismas columnas en el mismo orden.
+5. Abrir el PR, esperar `plan` y `tests` en verde y hacer merge.
+6. Cuando termine el despliegue, en el SQL Editor:
+
+   ```sql
+   ALTER TABLE gas_price.gold.precios_diarios
+     ADD COLUMNS (region STRING COMMENT 'Región de la estación');
+   ```
+
+7. Correr `gas_price_pipeline`.
+
+Las filas que ya existían quedan con la columna nueva en nulo. En plata y oro no importa, porque se reescriben completas en el paso 7. En bronce, las versiones anteriores de los archivos quedan con nulo en esa columna.
+
+### Cambiar el tipo, renombrar o quitar una columna
+
+Unity Catalog no deja hacer estos cambios sin reescribir la tabla, así que se borra y se recrea.
+
+1. Pasos 1 a 5 de la sección anterior, con el cambio que corresponda.
+2. Cuando termine el despliegue, en el SQL Editor: `DROP TABLE gas_price.<esquema>.<tabla>;`
+3. Correr el job `gas_price_setup`, que la recrea con la definición nueva.
+4. Correr `gas_price_pipeline`, que la llena.
+
+**En plata y oro** no se pierde nada, porque el pipeline las reconstruye en unos 2 minutos. **En bronce** se pierden las versiones anteriores de los archivos: al recrearla solo vuelve la versión actual del repo. Antes de borrar una tabla de bronce, consultarlo con el equipo.
+
+### Agregar una tabla nueva
+
+Por ejemplo, las tablas de fotos.
+
+1. Agregar su `CREATE TABLE IF NOT EXISTS` en `databricks/sql/tablas.sql`, con columnas, tipos y comentarios.
+2. Escribir en ella con `insertInto` o `MERGE`, nunca con `saveAsTable`. `saveAsTable` puede cambiar la definición de la tabla.
+3. Agregar la tabla en `tests/test_tablas_sql.py`: en la lista de `test_estan_las_siete_tablas` y, si su código está en `src/`, en un test que compare sus columnas.
+4. Hacer merge. El despliegue corre `gas_price_setup` y la tabla queda creada sin pasos manuales.
+
 ## Bronce
 
 **`bronze.imagenes`**: una fila por foto.

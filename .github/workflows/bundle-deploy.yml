@@ -28,3 +28,8 @@ jobs:
 
       - name: Desplegar
         run: databricks bundle deploy -t prod
+
+      # Crea las tablas que falten según databricks/sql/tablas.sql.
+      # bundle run espera a que el job termine, salvo que se use --no-wait.
+      - name: Crear tablas
+        run: databricks bundle run gas_price_setup -t prod
