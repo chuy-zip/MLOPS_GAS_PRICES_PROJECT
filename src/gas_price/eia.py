@@ -33,22 +33,47 @@ PRECIO_MINIMO_USD = 0.10
 PRECIO_MAXIMO_USD = 10.0
 
 
-def leer(fuente) -> pd.DataFrame:
-    """Devuelve una fila por día de mercado con `fecha` y `precio_usd_galon`. `fuente` puede ser ruta, URL o bytes."""
-    hoja = pd.read_excel(fuente, sheet_name=HOJA, skiprows=2, engine="calamine")
+def _a_texto(valor) -> str | None:
+    if valor is None or (isinstance(valor, float) and np.isnan(valor)):
+        return None
+    if hasattr(valor, "strftime"):
+        return valor.strftime("%Y-%m-%d")
+    return str(valor)
+
+
+def extraer_crudo(fuente) -> pd.DataFrame:
+    """Fecha y precio como texto, sin interpretar. Es lo que guarda bronce. `fuente` puede ser ruta, URL o bytes."""
+    hoja = pd.read_excel(fuente, sheet_name=HOJA, skiprows=2, engine="calamine", dtype=object)
     if hoja.columns[0] != "Date" or "Dollars per Gallon" not in str(hoja.columns[1]):
         raise ValueError(f"Formato inesperado en el encabezado: {list(hoja.columns[:2])}")
 
-    datos = hoja.iloc[:, :2].copy()
-    datos.columns = ["fecha", "precio_usd_galon"]
-    datos = datos.dropna(subset=["fecha"])
-    datos["fecha"] = pd.to_datetime(datos["fecha"]).dt.date
-    datos["precio_usd_galon"] = pd.to_numeric(datos["precio_usd_galon"], errors="coerce")
+    hoja = hoja.dropna(subset=[hoja.columns[0]])
+    return pd.DataFrame(
+        {
+            "fecha_texto": hoja.iloc[:, 0].map(_a_texto).to_numpy(),
+            "precio_texto": hoja.iloc[:, 1].map(_a_texto).to_numpy(),
+        }
+    )
+
+
+def limpiar(crudo: pd.DataFrame) -> pd.DataFrame:
+    """Una fila por día de mercado con `fecha` y `precio_usd_galon`. Es la base de plata."""
+    datos = pd.DataFrame(
+        {
+            "fecha": pd.to_datetime(crudo["fecha_texto"]).dt.date,
+            "precio_usd_galon": pd.to_numeric(crudo["precio_texto"], errors="coerce"),
+        }
+    )
 
     datos = datos.drop_duplicates()
     if datos["fecha"].duplicated().any():
         raise ValueError("Hay fechas repetidas con precios distintos")
     return datos.sort_values("fecha").reset_index(drop=True)
+
+
+def leer(fuente) -> pd.DataFrame:
+    """Atajo para leer y limpiar un archivo en un paso."""
+    return limpiar(extraer_crudo(fuente))
 
 
 def precios_fuera_de_rango(datos: pd.DataFrame) -> pd.DataFrame:
