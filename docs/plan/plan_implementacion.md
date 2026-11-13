@@ -75,8 +75,9 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 3 | Tarea de la EIA a plata | Ricardo | Escrita, falta probar en Databricks |
 | 3 | Tarea de EXIF a plata | | Pendiente |
 | 3 | Definir cómo se aprovechan las fotos más allá del EXIF | | Pendiente |
-| 4 | Tarea de plata a oro, incluyendo la definición de la semana y del próximo cambio | | Pendiente |
-| 5 | Tarea de entrenamiento y registro en MLflow | | Pendiente |
+| 4 | Tarea de plata a oro, incluyendo la definición de la semana y del próximo cambio | Ricardo | Escrita, falta probar en Databricks |
+| 5 | Tarea de entrenamiento y registro en MLflow | Ricardo | Escrita, falta probar en Databricks |
+| 5 | Script de evaluación local del modelo | Ricardo | Hecho |
 | 5 | Tarea que publica la referencia actual para la API | | Pendiente |
 | 6 | API con FastAPI y Docker en el Droplet | | Pendiente |
 | 6 | Frontend simple con entrada de precio | | Pendiente |

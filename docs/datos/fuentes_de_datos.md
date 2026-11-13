@@ -65,6 +65,15 @@ Si un cambio de precio histórico es intencional, por ejemplo una corrección de
 | `gasolina_costa_golfo_diario.xls` | [EER_EPMRU_PF4_RGC_DPG](https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?n=PET&s=EER_EPMRU_PF4_RGC_DPG&f=D), gasolina regular convencional | Súper y regular | 1986 |
 | `diesel_costa_golfo_diario.xls` | [EER_EPD2DXL0_PF4_RGC_DPG](https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?n=PET&s=EER_EPD2DXL0_PF4_RGC_DPG&f=D), diésel de ultra bajo azufre | Diésel | 2006 |
 
+**Por qué la Súper y la Regular comparten una serie:**
+
+1. La EIA no publica precio spot de gasolina premium. Su [tabla de precios spot](https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm) solo tiene gasolina regular, diésel y otros productos.
+2. En los datos del MEM, la Súper y la Regular se mueven juntas. En 97 % de las semanas van en la misma dirección, sus cambios semanales tienen una correlación de 0.96 y la Súper cuesta en promedio Q1.31 más.
+3. El modelo usa cambios, no niveles. Las variables internacionales miden cuánto cambió el precio, y la brecha se compara contra su propio promedio de 8 semanas. La diferencia fija entre las dos gasolinas se cancela.
+4. El diésel sí tiene serie propia, porque se mueve distinto: sus cambios tienen una correlación de 0.79 con los de las gasolinas.
+
+La relación entre combustible y serie está en `SERIES`, en `src/gas_price/eia.py`.
+
 **Por qué se agregó:** el precio local sigue al internacional con una o dos semanas de atraso. Sin este dato, el modelo no supera a la regla de repetir la dirección de la semana anterior. Ver [modelo.md](../modelo/modelo.md).
 
 **Formato:** archivo `.xls` con la hoja `Data 1`, dos filas de títulos y luego fecha y precio. Solo vienen los días con mercado abierto. El lector está en `src/gas_price/eia.py`.

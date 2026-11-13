@@ -111,8 +111,30 @@ Si se decide sacar más datos de las imágenes, sus tablas se agregan aquí. Ver
 
 **Regla de relleno:** el precio oficial se mantiene igual entre un cambio y el siguiente. Un día faltante toma el último precio conocido y queda marcado con `es_imputado`. Las fotos nunca rellenan el precio oficial.
 
-**`gold.features_semanales`**: una fila por semana y combustible, con el cambio de la semana, rezagos, tendencia, tipo de cambio, régimen fiscal, variables del precio internacional y la etiqueta del cambio de la semana siguiente. El precio internacional de cada lunes es el promedio de los 7 días anteriores, para usar solo lo que ya se sabía ese día.
+**`gold.features_semanales`**: una fila por lunes y combustible.
 
-**`gold.referencia_actual`**: el último precio de referencia por combustible y el rango de "buen precio". Es lo que consulta la API.
+| Columnas | Contenido |
+|---|---|
+| semana, combustible, precio | El lunes, el combustible y su precio ese día |
+| cambio_l1 a cambio_l4 | Cambio de precio de cada una de las 4 semanas anteriores |
+| tendencia_4, tendencia_8 | Precio menos su promedio de 4 y de 8 semanas |
+| tipo_cambio_cambio, mes | Cambio semanal del tipo de cambio y mes del año |
+| otro_super_l1, otro_regular_l1, otro_diesel_l1 | Último cambio semanal de cada combustible |
+| intl_cambio_1 a intl_cambio_3 | Cambio del precio internacional en quetzales en las 3 semanas anteriores |
+| brecha_vs_8 | Precio local menos internacional, comparado con su promedio de 8 semanas |
+| cambio_siguiente, etiqueta | Cambio hasta el lunes siguiente y su dirección: `sube`, `baja` o `igual`. La última semana no tiene etiqueta |
+
+El precio internacional de cada lunes es el promedio de los 7 días anteriores, para usar solo lo que ya se sabía ese día.
+
+**`gold.referencia_actual`**: una fila por combustible. Es lo que consulta la API.
+
+| Columna | Contenido |
+|---|---|
+| combustible, fecha_referencia, precio_referencia | Último precio oficial |
+| limite_normal | Precio de referencia más Q1.00, la diferencia normal entre estaciones según el análisis de negocio |
+| tipo_cambio, regimen_fiscal | Del último día |
+| proximo_cambio | El lunes siguiente, cuando se espera el próximo cambio |
+
+Un precio igual o menor que la referencia es buen precio. Hasta `limite_normal` es normal. Arriba de eso es caro.
 
 **Modelo:** `modelo_tendencia_precio` en el esquema de oro, por ejemplo `gas_price.gold.modelo_tendencia_precio`, con alias `champion`.

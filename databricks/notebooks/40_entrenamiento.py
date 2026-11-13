@@ -1,13 +1,104 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 40 Entrenamiento del modelo
+# MAGIC # 40 Entrenamiento del modelo de tendencia
 # MAGIC
-# MAGIC Entrena el clasificador de tendencia y lo registra en MLflow con alias `champion`.
+# MAGIC 1. Lee `gold.features_semanales`. Si esos datos ya se usaron en una corrida anterior, termina sin entrenar.
+# MAGIC 2. Evalúa con partición temporal: entrena con el pasado y prueba con los últimos dos años.
+# MAGIC    Registra las métricas del modelo y de la regla "repetir la semana pasada", para comparar.
+# MAGIC 3. Entrena el modelo final con todas las semanas que tienen etiqueta.
+# MAGIC 4. Lo registra en Unity Catalog con firma y le asigna el alias `champion`.
 # MAGIC
-# MAGIC Pendiente de implementar en la fase 5. Ver `docs/arquitectura/arquitectura.md`.
+# MAGIC El modelo y la evaluación están en `src/gas_price/modelo.py`. No hay un mínimo de desempeño para registrarlo.
 
 # COMMAND ----------
 
+dbutils.widgets.text("catalogo", "gas_price")
+dbutils.widgets.text("esquema_gold", "gold")
+dbutils.widgets.text("experimento", "/Shared/gas_price_tendencia")
+
 catalogo = dbutils.widgets.get("catalogo")
-print("Catálogo:", catalogo)
-dbutils.notebook.exit("Pendiente de implementar")
+esquema_gold = dbutils.widgets.get("esquema_gold")
+experimento = dbutils.widgets.get("experimento")
+
+# COMMAND ----------
+
+import hashlib
+import os
+import sys
+
+import mlflow
+import mlflow.sklearn
+import pandas as pd
+from mlflow.models import infer_signature
+from mlflow.tracking import MlflowClient
+
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "..", "..", "src")))
+from gas_price import features, modelo
+
+NOMBRE_MODELO = f"{catalogo}.{esquema_gold}.modelo_tendencia_precio"
+ALIAS = "champion"
+
+mlflow.set_registry_uri("databricks-uc")
+mlflow.set_experiment(experimento)
+
+# COMMAND ----------
+
+semanales = spark.table(f"{catalogo}.{esquema_gold}.features_semanales").toPandas()
+datos = modelo.con_etiqueta(semanales)
+
+# Huella de los datos de entrenamiento. Si ya hay una corrida con la misma huella, no se vuelve a entrenar.
+columnas = [*features.VARIABLES, "etiqueta"]
+huella = hashlib.sha256(pd.util.hash_pandas_object(datos[columnas], index=False).values.tobytes()).hexdigest()
+previas = mlflow.search_runs(filter_string=f"tags.huella_datos = '{huella}'", max_results=1)
+if len(previas) > 0:
+    dbutils.notebook.exit(f"Sin cambios: estos datos ya se usaron en la corrida {previas.iloc[0]['run_id']}")
+
+print(f"{len(datos)} filas con etiqueta, de {datos['semana'].min()} a {datos['semana'].max()}")
+
+# COMMAND ----------
+
+with mlflow.start_run(run_name="logistica_mem_eia") as corrida:
+    _, resultado = modelo.evaluar(semanales)
+    mlflow.log_metrics({k: v for k, v in resultado.items() if isinstance(v, float)})
+    mlflow.log_params(
+        {
+            "modelo": "LogisticRegression",
+            "semanas_de_prueba": modelo.SEMANAS_DE_PRUEBA,
+            "umbral_cambio": features.UMBRAL_CAMBIO,
+            "filas_entrenamiento": resultado["filas_entrenamiento"],
+            "filas_prueba": resultado["filas_prueba"],
+            "inicio_prueba": resultado["inicio_prueba"],
+            "variables": ",".join(features.VARIABLES),
+        }
+    )
+    mlflow.set_tags({"huella_datos": huella, "fuentes": "mem,eia"})
+
+    # El modelo final aprende de todas las semanas. Las métricas de arriba vienen de la evaluación con el pasado.
+    final = modelo.construir_modelo().fit(datos[features.VARIABLES], datos["etiqueta"])
+    firma = infer_signature(datos[features.VARIABLES], final.predict(datos[features.VARIABLES]))
+    mlflow.sklearn.log_model(
+        sk_model=final,
+        name="model",
+        signature=firma,
+        input_example=datos[features.VARIABLES].head(3),
+        serialization_format="cloudpickle",
+        registered_model_name=NOMBRE_MODELO,
+    )
+
+print("Corrida:", corrida.info.run_id)
+print(pd.Series(resultado).to_string())
+
+# COMMAND ----------
+
+cliente = MlflowClient()
+versiones = cliente.search_model_versions(f"name = '{NOMBRE_MODELO}'")
+ultima = max(versiones, key=lambda v: int(v.version))
+cliente.set_registered_model_alias(NOMBRE_MODELO, ALIAS, ultima.version)
+print(f"{NOMBRE_MODELO}@{ALIAS} apunta a la versión {ultima.version}")
+
+# COMMAND ----------
+
+# Prueba como lo haría un consumidor: cargar por alias y predecir la semana más reciente.
+cargado = mlflow.pyfunc.load_model(f"models:/{NOMBRE_MODELO}@{ALIAS}")
+ultima_semana = semanales[semanales["semana"] == semanales["semana"].max()]
+display(ultima_semana[["semana", "combustible", "precio"]].assign(prediccion=cargado.predict(ultima_semana[features.VARIABLES])))
