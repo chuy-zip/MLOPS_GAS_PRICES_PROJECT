@@ -2,12 +2,71 @@
 # MAGIC %md
 # MAGIC # 22 Precios internacionales de la EIA a plata
 # MAGIC
-# MAGIC Convierte tipos, valida y escribe `silver.precios_internacionales`.
+# MAGIC Toma la versión más reciente de cada serie en `bronze.eia_precios` y escribe `silver.precios_internacionales`.
+# MAGIC Las reglas de limpieza están en `src/gas_price/eia.py`. Los fines de semana y feriados no tienen fila: oro los rellena.
 # MAGIC
-# MAGIC Pendiente de implementar en la fase 3. Ver `docs/arquitectura/arquitectura.md`.
+# MAGIC La tabla se reescribe completa en cada corrida, porque cada archivo trae la serie entera.
 
 # COMMAND ----------
 
+dbutils.widgets.text("catalogo", "gas_price")
+dbutils.widgets.text("esquema_bronze", "bronze")
+dbutils.widgets.text("esquema_silver", "silver")
+
 catalogo = dbutils.widgets.get("catalogo")
-print("Catálogo:", catalogo)
-dbutils.notebook.exit("Pendiente de implementar")
+esquema_bronze = dbutils.widgets.get("esquema_bronze")
+esquema_silver = dbutils.widgets.get("esquema_silver")
+
+# COMMAND ----------
+
+import os
+import sys
+
+import pandas as pd
+from pyspark.sql import Window
+from pyspark.sql import functions as F
+
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "..", "..", "src")))
+from gas_price import eia
+
+ORIGEN = f"{catalogo}.{esquema_bronze}.eia_precios"
+DESTINO = f"{catalogo}.{esquema_silver}.precios_internacionales"
+
+# COMMAND ----------
+
+bronce = spark.table(ORIGEN)
+# Versión más reciente de cada serie.
+reciente = Window.partitionBy("serie").orderBy(F.col("_ingestado_en").desc())
+ultimas = (
+    bronce.select("serie", "_hash_archivo", "_archivo_origen", "_ingestado_en")
+    .distinct()
+    .withColumn("orden", F.row_number().over(reciente))
+    .filter("orden = 1")
+    .collect()
+)
+
+partes = []
+for ultima in ultimas:
+    crudo = bronce.filter(
+        (F.col("serie") == ultima["serie"]) & (F.col("_hash_archivo") == ultima["_hash_archivo"])
+    ).toPandas()
+    limpio = eia.limpiar(crudo)
+    fuera = eia.precios_fuera_de_rango(limpio)
+    if len(fuera) > 0:
+        raise ValueError(f"{ultima['serie']}: {len(fuera)} precios fuera de rango:\n{fuera.head()}")
+    limpio.insert(1, "serie", ultima["serie"])
+    limpio["_archivo_origen"] = ultima["_archivo_origen"]
+    partes.append(limpio)
+    print(f"{ultima['serie']}: {len(limpio)} días, de {limpio['fecha'].min()} a {limpio['fecha'].max()}")
+
+# COMMAND ----------
+
+esquema = "fecha DATE, serie STRING, precio_usd_galon DOUBLE, _archivo_origen STRING"
+(
+    spark.createDataFrame(pd.concat(partes, ignore_index=True), schema=esquema)
+    .write.mode("overwrite")
+    .option("overwriteSchema", "true")
+    .saveAsTable(DESTINO)
+)
+
+display(spark.table(DESTINO).groupBy("serie").agg(F.count("*").alias("dias"), F.min("fecha"), F.max("fecha")))

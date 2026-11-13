@@ -67,12 +67,12 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 1 | Paquete `gas_price` con el lector del Excel del MEM | Ricardo | Hecho |
 | 2 | Test de "no empeorar" el Excel del MEM y workflow `tests.yml` | Ricardo | Hecho |
 | 2 | Agregar el check `tests` al ruleset de `main` | | Pendiente |
-| 2 | Tarea de ingesta del Excel a bronce | | Pendiente |
+| 2 | Tarea de ingesta del Excel a bronce | Ricardo | Escrita, falta probar en Databricks |
 | 2 | Lector de los archivos de la EIA y sus tests | Ricardo | Hecho |
-| 2 | Tarea de ingesta de la EIA a bronce | | Pendiente |
+| 2 | Tarea de ingesta de la EIA a bronce | Ricardo | Escrita, falta probar en Databricks |
 | 2 | Tarea de ingesta de fotos a bronce con Auto Loader | | Pendiente |
-| 3 | Tarea del Excel a plata | | Pendiente |
-| 3 | Tarea de la EIA a plata | | Pendiente |
+| 3 | Tarea del Excel a plata | Ricardo | Escrita, falta probar en Databricks |
+| 3 | Tarea de la EIA a plata | Ricardo | Escrita, falta probar en Databricks |
 | 3 | Tarea de EXIF a plata | | Pendiente |
 | 3 | Definir cómo se aprovechan las fotos más allá del EXIF | | Pendiente |
 | 4 | Tarea de plata a oro, incluyendo la definición de la semana y del próximo cambio | | Pendiente |

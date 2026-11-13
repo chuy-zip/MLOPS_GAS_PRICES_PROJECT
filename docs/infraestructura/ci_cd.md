@@ -65,7 +65,7 @@ Un mismo archivo no se edita en los dos lugares a la vez. Antes de empezar a edi
 
 **No desplegar desde Databricks.** Al abrir un notebook de la carpeta Git aparece el aviso "This file is part of a bundle. Switch to associated bundle". La vista del bundle tiene un botón para desplegar. No se usa: el único destino es `prod`, y desplegar desde una rama pondría código sin revisar en el ambiente compartido.
 
-**Tablas compartidas.** No hay esquemas por persona. Las pruebas escriben sobre los esquemas de `gas_price`, por eso cada tabla tiene un solo responsable a la vez, asignado en el plan. Los notebooks escriben con `MERGE` por llave, así que repetir una prueba no duplica datos.
+**Tablas compartidas.** No hay esquemas por persona. Las pruebas escriben sobre los esquemas de `gas_price`, por eso cada tabla tiene un solo responsable a la vez, asignado en el plan. Repetir una prueba no duplica datos: bronce salta los archivos con la misma huella y plata se reescribe completa.
 
 ## Workflows de GitHub Actions
 

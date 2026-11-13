@@ -56,12 +56,14 @@ En el resto de los documentos, `bronze.tabla` abrevia la tabla en el esquema de 
 | fecha_texto | STRING | |
 | tipo_cambio_texto | STRING | |
 | super_texto, regular_texto, diesel_texto | STRING | |
-| _archivo_origen | STRING | Ruta de la copia en el volumen `archivos` |
-| _commit_origen | STRING | Commit del repo de donde vino el archivo |
-| _hash_archivo | STRING | Si no cambió, no se vuelve a cargar |
+| _archivo_origen | STRING | Ruta de la copia en el volumen `archivos`, con la huella en el nombre |
+| _url_origen | STRING | URL del repo de donde se descargó |
+| _hash_archivo | STRING | Huella SHA256 del archivo. Si ya está en la tabla, no se vuelve a cargar |
 | _ingestado_en | TIMESTAMP | |
 
-**`bronze.eia_precios`**: una fila por fila de cada archivo de la EIA, todo como texto. Columnas: serie, fecha_texto, precio_texto, _archivo_origen, _commit_origen, _hash_archivo y _ingestado_en.
+Cada versión nueva del Excel se agrega a la tabla, sin borrar las anteriores. Plata usa la más reciente.
+
+**`bronze.eia_precios`**: una fila por fila de cada archivo de la EIA, todo como texto. Columnas: serie, fecha_texto, precio_texto, _archivo_origen, _url_origen, _hash_archivo y _ingestado_en. Funciona igual que `bronze.mem_precios`, con una versión por serie.
 
 ## Plata
 
