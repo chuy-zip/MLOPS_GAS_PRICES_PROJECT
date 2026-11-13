@@ -7,7 +7,7 @@ Monitoreo del precio de la gasolina en Guatemala. Toda la documentación del pro
 | plan | [plan_implementacion.md](plan/plan_implementacion.md) | Fases, tareas, decisiones y bitácora. Es el punto de partida |
 | contexto | [caso_de_uso.md](contexto/caso_de_uso.md) | Caso de uso, análisis de negocio, diagrama original y código previo que se reutiliza |
 | arquitectura | [arquitectura.md](arquitectura/arquitectura.md) | Componentes, pipeline, orquestación y servicio |
-| datos | [fuentes_de_datos.md](datos/fuentes_de_datos.md) | Excel del MEM, fotos y cómo se actualizan |
+| datos | [fuentes_de_datos.md](datos/fuentes_de_datos.md) | Excel del MEM, precios internacionales de la EIA, fotos y cómo se actualizan |
 | datos | [esquemas_medallion.md](datos/esquemas_medallion.md) | Qué va en cada capa y el esquema de cada tabla |
 | modelo | [modelo.md](modelo/modelo.md) | Qué modelo se entrena y por qué |
 | infraestructura | [databricks.md](infraestructura/databricks.md) | Workspace, external locations, permisos y token |

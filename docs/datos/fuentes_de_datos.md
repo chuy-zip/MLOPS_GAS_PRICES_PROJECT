@@ -94,6 +94,24 @@ Se prefirió un script a un workflow programado: un workflow abriría un pull re
 
 Databricks lee los archivos desde el repo público, porque no está confirmado que `eia.gov` esté entre los dominios permitidos de Free Edition.
 
+## Ciclo semanal de actualización
+
+El precio oficial cambia casi siempre los lunes. Ese día hay que actualizar los datos para que la API y el modelo estén al día.
+
+| Paso | Quién o qué | Automático |
+|---|---|---|
+| 1. Descargar el Excel del MEM y reemplazarlo en `data/mem/` | Una persona del equipo | No |
+| 2. Correr `python scripts/actualizar_eia.py` | Una persona del equipo | La descarga sí |
+| 3. Abrir un pull request | Una persona del equipo | No |
+| 4. Validar que los datos no empeoren | Workflow `tests.yml` | Sí |
+| 5. Correr el job `gas_price_pipeline` | Una persona del equipo | No |
+| 6. Recalcular `gold.referencia_actual` y reentrenar el modelo | El job | Sí |
+| 7. Reconstruir la imagen de la API | CI, al definirse la fase 6 | Por definir |
+
+**Qué es la referencia.** Es el precio oficial vigente de cada combustible: el último que publicó el MEM. Vive en `gold.referencia_actual`. Contra ella se juzga si el precio que ingresa el usuario es bueno, normal o caro. No es un endpoint: el CI la copia a la imagen de la API junto con el modelo.
+
+**Si nadie actualiza,** la API sigue funcionando, pero compara contra el precio de la última actualización y el modelo predice con datos viejos. Por eso la referencia incluye `fecha_referencia`, para que la API pueda mostrar de cuándo es.
+
 ## 3. Fotos de dispensadores
 
 **Dónde están:** en el bucket de la external location `xloc-raw`, que es solo de lectura.
