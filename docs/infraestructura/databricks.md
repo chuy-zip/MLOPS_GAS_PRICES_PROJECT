@@ -48,7 +48,7 @@ La página no menciona si funcionan los file arrival triggers. Se prueba en la f
 | Tabla externa | Tabla que apunta a archivos en una ruta elegida a mano. Si se borra la tabla, los archivos quedan | No se usa |
 | Volumen | Objeto de Unity Catalog para guardar archivos que no son tablas, como imágenes o Excel | Un volumen administrado en bronce para la copia del Excel y los checkpoints |
 
-**Por qué las tablas van en los buckets.** El diagrama del catedrático pone cada capa en S3, y él creó una external location por capa con permiso de escritura para todos. La forma más simple de cumplirlo es que cada esquema tenga su bucket como ubicación administrada. Así las tablas son administradas normales: se crean con `saveAsTable` y Unity Catalog decide dónde van los archivos. No hacen falta tablas externas.
+**Por qué las tablas van en los buckets.** El diagrama del catedrático pone cada capa en S3, y él creó una external location por capa. La forma más simple de cumplirlo es que cada esquema tenga su bucket como ubicación administrada. Así las tablas son administradas normales: se crean desde `databricks/sql/tablas.sql` y Unity Catalog decide dónde van los archivos. No hacen falta tablas externas. Mientras no lleguen los permisos, ver "Resultado de la prueba" más abajo, las tablas usan el almacenamiento por defecto.
 
 **Raw no necesita ningún objeto.** Las fotos se leen directo por ruta, con el permiso `READ FILES` que ya tenemos.
 
