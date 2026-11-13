@@ -76,7 +76,7 @@ with mlflow.start_run(run_name="logistica_mem_eia") as corrida:
     # El modelo final aprende de todas las semanas. Las métricas de arriba vienen de la evaluación con el pasado.
     final = modelo.construir_modelo().fit(datos[features.VARIABLES], datos["etiqueta"])
     firma = infer_signature(datos[features.VARIABLES], final.predict(datos[features.VARIABLES]))
-    mlflow.sklearn.log_model(
+    info = mlflow.sklearn.log_model(
         sk_model=final,
         name="model",
         signature=firma,
@@ -90,11 +90,11 @@ print(pd.Series(resultado).to_string())
 
 # COMMAND ----------
 
-cliente = MlflowClient()
-versiones = cliente.search_model_versions(f"name = '{NOMBRE_MODELO}'")
-ultima = max(versiones, key=lambda v: int(v.version))
-cliente.set_registered_model_alias(NOMBRE_MODELO, ALIAS, ultima.version)
-print(f"{NOMBRE_MODELO}@{ALIAS} apunta a la versión {ultima.version}")
+# Se usa la versión que devolvió el registro. Buscar "la más reciente" justo después de registrar
+# puede no encontrarla todavía, y el alias se quedaría en la versión anterior.
+version = info.registered_model_version
+MlflowClient().set_registered_model_alias(NOMBRE_MODELO, ALIAS, version)
+print(f"{NOMBRE_MODELO}@{ALIAS} apunta a la versión {version}")
 
 # COMMAND ----------
 
