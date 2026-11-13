@@ -32,7 +32,7 @@ def lunes_con_precios(precios: list[float], inicio="2026-01-05") -> dict:
 
 def test_etiquetar_usa_el_umbral():
     etiquetas = features.etiquetar(pd.Series([0.5, -0.5, 0.05, -0.05, np.nan]))
-    assert list(etiquetas) == ["sube", "baja", "igual", "igual", None]
+    assert list(etiquetas) == ["sube", "baja", "se_mantiene", "se_mantiene", None]
 
 
 def test_precios_diarios_rellena_huecos_y_los_marca():
@@ -50,7 +50,7 @@ def test_features_etiqueta_es_el_cambio_de_la_semana_siguiente():
     superior = semanales[semanales["combustible"] == "super"].set_index("semana")
 
     assert superior.loc[dt.date(2026, 3, 2), "etiqueta"] == "sube"  # 30 a 31
-    assert superior.loc[dt.date(2026, 3, 9), "etiqueta"] == "igual"  # 31 a 31
+    assert superior.loc[dt.date(2026, 3, 9), "etiqueta"] == "se_mantiene"  # 31 a 31
     assert superior.loc[dt.date(2026, 3, 16), "etiqueta"] == "baja"  # 31 a 30
     assert superior["etiqueta"].iloc[-1] is None, "La última semana todavía no tiene etiqueta"
 
@@ -97,7 +97,7 @@ def semanales_sinteticas(semanas=60) -> pd.DataFrame:
         for c in ["super", "regular", "diesel"]:
             fila = {"semana": dt.date(2025, 1, 6) + dt.timedelta(weeks=i), "combustible": c}
             fila.update({v: generador.normal() for v in features.VARIABLES_NUMERICAS})
-            fila["etiqueta"] = ["sube", "baja", "igual"][(i + len(c)) % 3]
+            fila["etiqueta"] = ["sube", "baja", "se_mantiene"][(i + len(c)) % 3]
             filas.append(fila)
     return pd.DataFrame(filas)
 
@@ -112,5 +112,25 @@ def test_modelo_entrena_y_predice_las_tres_clases():
     datos = semanales_sinteticas()
     entrenado, resultado = modelo.evaluar(datos, semanas_de_prueba=10)
     predicciones = entrenado.predict(datos[features.VARIABLES])
-    assert set(predicciones) <= {"sube", "baja", "igual"}
+    assert set(predicciones) <= {"sube", "baja", "se_mantiene"}
     assert 0 <= resultado["modelo_balanced_accuracy"] <= 1
+
+
+def test_predecir_la_semana_actual():
+    datos = semanales_sinteticas()
+    ultima = datos["semana"].max()
+    datos.loc[datos["semana"] == ultima, "etiqueta"] = None
+    entrenado = modelo.construir_modelo().fit(*[
+        modelo.con_etiqueta(datos)[features.VARIABLES], modelo.con_etiqueta(datos)["etiqueta"]
+    ])
+
+    filas = modelo.semana_a_predecir(datos)
+    resultado = modelo.predecir(entrenado, filas, version_modelo="3")
+
+    assert list(resultado["combustible"]) == ["diesel", "regular", "super"]
+    assert (resultado["semana"] == ultima).all()
+    assert (resultado["semana_objetivo"] == ultima + dt.timedelta(days=7)).all()
+    sumas = resultado[["prob_sube", "prob_baja", "prob_se_mantiene"]].sum(axis=1)
+    assert sumas.to_numpy() == pytest.approx([1.0, 1.0, 1.0])
+    assert (resultado["probabilidad"] == resultado[["prob_sube", "prob_baja", "prob_se_mantiene"]].max(axis=1)).all()
+    assert set(resultado["version_modelo"]) == {"3"}

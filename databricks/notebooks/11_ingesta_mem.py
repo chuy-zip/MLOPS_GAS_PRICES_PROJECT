@@ -19,9 +19,9 @@ dbutils.library.restartPython()
 # COMMAND ----------
 
 # En un job, los parámetros llegan como widgets. Los valores por defecto sirven para correrlo a mano.
-dbutils.widgets.text("catalogo", "gas_price")
+dbutils.widgets.text("catalogo", "equipo_01")
 dbutils.widgets.text("esquema_bronze", "bronze")
-dbutils.widgets.text("repo_raw", "https://raw.githubusercontent.com/chuy-zip/MLOPS_GAS_PRICES_PROJECT/main")
+dbutils.widgets.text("repo_raw", "https://raw.githubusercontent.com/chuy-zip/equipo-01-gasolina-gt/main")
 
 catalogo = dbutils.widgets.get("catalogo")
 esquema_bronze = dbutils.widgets.get("esquema_bronze")

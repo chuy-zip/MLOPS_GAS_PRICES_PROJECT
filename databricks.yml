@@ -4,7 +4,7 @@ bundle:
 include:
   - resources/*.yml
 
-# Databricks solo necesita los notebooks. El Excel se lee desde el repo público.
+# Databricks solo necesita los notebooks, src/ y databricks/sql. Los datos se leen desde el repo público.
 sync:
   exclude:
     - docs/**
@@ -22,8 +22,8 @@ permissions:
 
 variables:
   catalogo:
-    description: Catálogo de Unity Catalog del proyecto
-    default: gas_price
+    description: Catálogo de Unity Catalog del proyecto. Sigue la convención equipo_XX del enunciado
+    default: equipo_01
   esquema_bronze:
     description: Esquema de la capa de bronce
     default: bronze
@@ -33,6 +33,12 @@ variables:
   esquema_gold:
     description: Esquema de la capa de oro
     default: gold
+  repo_raw:
+    description: URL base de los archivos crudos del repo en GitHub. De aquí se descargan los datos de data/
+    default: https://raw.githubusercontent.com/chuy-zip/equipo-01-gasolina-gt/main
+  correo_alertas:
+    description: Correo que recibe una alerta si un job falla
+    default: chuy.ricardo2@gmail.com
 
 targets:
   prod:

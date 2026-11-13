@@ -1,11 +1,23 @@
 resources:
   jobs:
     gas_price_pipeline:
-      name: gas_price_pipeline
-      description: Pipeline de raw a oro, entrenamiento y publicación de la referencia. Sin calendario.
+      name: equipo-01-pipeline
+      description: Pipeline de bronce a oro, entrenamiento y predicción de la semana siguiente. Corre cada martes, cuando el MEM publica los precios de referencia.
       max_concurrent_runs: 1
       tags:
         proyecto: gas_price
+        equipo: equipo-01
+
+      # Cada martes a las 8:00, hora de Guatemala.
+      schedule:
+        quartz_cron_expression: "0 0 8 ? * TUE"
+        timezone_id: America/Guatemala
+        pause_status: UNPAUSED
+
+      email_notifications:
+        on_failure:
+          - ${var.correo_alertas}
+
       parameters:
         - name: catalogo
           default: ${var.catalogo}
@@ -15,6 +27,9 @@ resources:
           default: ${var.esquema_silver}
         - name: esquema_gold
           default: ${var.esquema_gold}
+        - name: repo_raw
+          default: ${var.repo_raw}
+
       tasks:
         - task_key: ingesta_imagenes
           notebook_task:
@@ -60,8 +75,8 @@ resources:
           notebook_task:
             notebook_path: ../databricks/notebooks/40_entrenamiento.py
 
-        - task_key: publicar_referencia
+        - task_key: predicciones
           depends_on:
             - task_key: entrenamiento
           notebook_task:
-            notebook_path: ../databricks/notebooks/50_publicar_referencia.py
+            notebook_path: ../databricks/notebooks/50_predicciones.py

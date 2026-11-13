@@ -58,11 +58,45 @@ def test_cada_sentencia_crea_una_tabla_sin_reemplazar_nada():
         assert sentencia.startswith("CREATE TABLE IF NOT EXISTS"), sentencia[:60]
 
 
-def test_estan_las_siete_tablas(tablas):
+def test_estan_todas_las_tablas(tablas):
     assert set(tablas) == {
         "mem_precios", "eia_precios", "precios_oficiales", "precios_internacionales",
-        "precios_diarios", "features_semanales", "referencia_actual",
+        "precios_diarios", "features_semanales", "referencia_actual", "predicciones", "metricas_modelo",
     }
+
+
+def test_cada_columna_de_oro_tiene_comentario():
+    for sentencia in sentencias():
+        if "${esquema_gold}" not in sentencia:
+            continue
+        cuerpo = sentencia.split("(", 1)[1].rsplit(")", 1)[0]
+        for linea in cuerpo.splitlines():
+            if linea.strip():
+                assert "COMMENT" in linea, f"Columna de oro sin comentario: {linea.strip()}"
+        assert sentencia.rsplit(")", 1)[1].strip().startswith("COMMENT"), "Tabla de oro sin comentario"
+
+
+def test_predicciones_coincide_con_el_codigo(tablas, oro):
+    from gas_price import modelo
+    semanales = oro["features_semanales"]
+    entrenado = modelo.construir_modelo().fit(
+        modelo.con_etiqueta(semanales)[features.VARIABLES], modelo.con_etiqueta(semanales)["etiqueta"]
+    )
+    resultado = modelo.predecir(entrenado, modelo.semana_a_predecir(semanales), version_modelo="1")
+    assert tablas["predicciones"] == [*resultado.columns, "predicho_en", "direccion_real", "acierto"]
+
+
+def test_metricas_modelo_coincide_con_el_codigo(tablas):
+    from gas_price import modelo
+    resultado = {k: 0.5 for k in [
+        "modelo_balanced_accuracy", "modelo_f1_macro", "modelo_direccion_con_movimiento",
+        "regla_balanced_accuracy", "regla_f1_macro", "regla_direccion_con_movimiento",
+    ]}
+    resultado.update(filas_entrenamiento=10, filas_prueba=5, inicio_prueba="2024-11-11")
+    fila = modelo.fila_de_metricas(resultado, version_modelo="1")
+    esperadas = list(fila.columns)
+    esperadas.insert(1, "entrenado_en")
+    assert tablas["metricas_modelo"] == esperadas
 
 
 def test_bronce_coincide_con_los_lectores(tablas):

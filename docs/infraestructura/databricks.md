@@ -20,7 +20,18 @@ Tomados de la [documentación oficial de límites de Free Edition](https://docs.
 | Cuota de uso justa: si se excede, el cómputo se apaga el resto del día | El pipeline debe ser incremental y no reprocesar todo |
 | Sin acceso a la consola de cuenta ni a APIs de cuenta | Solo se pueden usar APIs del workspace. Unity Catalog, jobs y notebooks son del workspace, así que sí se pueden manejar con código |
 
-La página no menciona si funcionan los file arrival triggers. Se prueba en la fase 1.
+La página no menciona si funcionan los file arrival triggers. Por eso el job usa una programación semanal, que el enunciado también acepta.
+
+## Cómputo: clusters del enunciado contra serverless
+
+El enunciado pide desarrollar en un cluster interactivo, correr el job en un job cluster, documentar la configuración de cada uno y explicar la diferencia de costo y propósito. También acepta "el cómputo que indique el catedrático".
+
+| Enunciado | Qué es | En Free Edition |
+|---|---|---|
+| Cluster interactivo (all-purpose) | Se enciende a mano y se conectan notebooks para desarrollar. Cobra mientras está encendido, aunque nadie lo use. Por eso el enunciado exige apagado automático a los 30 minutos sin uso | Serverless interactivo: el cómputo de los notebooks. No se configura ni hay que apagarlo |
+| Job cluster | Se crea al iniciar una corrida del job y se destruye al terminar. Solo cobra durante la corrida. Es más barato | Serverless de jobs: se asigna a cada corrida y se libera al terminar |
+
+En serverless no se elige versión de runtime, tipo de nodo ni cantidad de workers: Databricks los administra. Las librerías se instalan por notebook con `%pip`, y la versión del entorno serverless se ve en el panel **Environment** de cada notebook. Esta equivalencia hay que confirmarla con el catedrático.
 
 ## Lecciones aprendidas
 

@@ -28,7 +28,7 @@ Fuente: [documentación de comandos de bundles](https://docs.databricks.com/aws/
 |---|---|
 | Jobs y sus tareas | Bundle, en `resources/` |
 | Catálogo, esquemas y volumen | Script `infra/sql/00_unity_catalog.sql`, corrido una vez a mano. El bundle también podría definirlos, pero ya existen y casi no cambian. Además, un `bundle destroy` los borraría con todo su contenido |
-| Tablas, con sus columnas y tipos | `databricks/sql/tablas.sql`. Lo corre el job `gas_price_setup`, que el workflow de despliegue lanza justo después de `bundle deploy`. Así la estructura se aplica al hacer merge, igual que los jobs, y el pipeline solo procesa datos |
+| Tablas, con sus columnas y tipos | `databricks/sql/tablas.sql`. Lo corre el job `equipo-01-setup`, que el workflow de despliegue lanza justo después de `bundle deploy`. Así la estructura se aplica al hacer merge, igual que los jobs, y el pipeline solo procesa datos |
 
 ## Un solo ambiente compartido
 
@@ -48,7 +48,7 @@ No se usa el modo producción de los bundles. Según la [documentación de modos
 
 1. Ser colaborador del repo en GitHub, con permiso de escritura.
 2. En Databricks: clic en el usuario, **Settings**, **Linked accounts**, **Add Git credential**, proveedor **GitHub**, **Link Git account**.
-3. Clonar el repo en su carpeta: **Workspace**, su carpeta de usuario, **Create**, **Git folder**, URL `https://github.com/chuy-zip/MLOPS_GAS_PRICES_PROJECT.git`.
+3. Clonar el repo en su carpeta: **Workspace**, su carpeta de usuario, **Create**, **Git folder**, URL `https://github.com/chuy-zip/equipo-01-gasolina-gt.git`.
 
 La app de Databricks en GitHub ya está instalada en el repo. Eso lo hace una sola vez el dueño del repo. Fuente: [credenciales de Git](https://docs.databricks.com/aws/en/repos/get-access-tokens-from-git-provider).
 
@@ -78,7 +78,7 @@ Un mismo archivo no se edita en los dos lugares a la vez. Antes de empezar a edi
 | Workflow | Cuándo corre | Qué hace |
 |---|---|---|
 | `bundle-plan.yml` | Pull request a `main` | `bundle validate` y `bundle plan -t prod`. Publica el plan como comentario desplegable y lo actualiza en cada push. Ya existe |
-| `bundle-deploy.yml` | Merge a `main`, o a mano | `bundle validate`, `bundle deploy -t prod` y `bundle run gas_price_setup`, que crea las tablas que falten. Ya existe |
+| `bundle-deploy.yml` | Merge a `main`, o a mano | `bundle validate`, `bundle deploy -t prod` y `bundle run gas_price_setup` (el job `equipo-01-setup`), que crea las tablas que falten. Ya existe |
 | `tests.yml` | Pull request a `main` | Tests del paquete `gas_price` y test de "no empeorar" los archivos de `data/` contra la versión de `main`. Ya existe |
 | `run-pipeline.yml` | Merge a `main` que cambia algo en `data/` | Dispara el job del pipeline para cargar los datos nuevos. Propuesto, todavía no existe. Hoy el pipeline se corre a mano |
 | `build-api.yml` | Merge a `main` que toca `serving/` | Construye la imagen de la API y la publica. Fase 6 |
@@ -112,20 +112,20 @@ databricks auth login --host <url_del_workspace>
 
 ## Despliegue de la API en el Droplet
 
-El Droplet lo provee el curso. Una persona del equipo tiene acceso por ssh con sudo. El proyecto no lo crea ni lo configura con código.
+El Droplet lo provee el curso y puede ser compartido entre equipos. Según el enunciado:
 
-**Propuesta:**
+1. Cada equipo entra por ssh con su usuario, `equipo-01`, y sus llaves. Trabaja solo en `/home/equipo-01/` y en su puerto, `80XX`. Tocar recursos de otro equipo es falta grave.
+2. No se instalan paquetes del sistema ni se reinicia el servidor sin autorización. Todo va en el entorno aislado elegido: Docker recomendado, o conda, uv o venv.
+3. La API lee las tablas de oro desde S3 con credenciales de solo lectura, en un `.env` con permisos 600. El `.env` nunca va al repo: el repo lleva un `.env.example` sin valores.
+4. El servicio sigue corriendo aunque se cierre la sesión ssh: contenedor con `restart: unless-stopped` o un servicio de `systemd`.
 
-1. El CI construye la imagen de Docker de la API y la publica en GitHub Container Registry.
-2. La imagen incluye el modelo `champion` y la referencia de precios vigente. El Droplet no consulta Databricks en cada request.
-3. Para actualizar el Droplet hay dos opciones:
-   1. La persona con acceso corre un script que baja la imagen nueva y reinicia el contenedor.
-   2. Esa persona agrega una llave de despliegue para que el CI lo haga por ssh. Requiere guardar `DROPLET_HOST` y `DROPLET_SSH_KEY` como secretos.
+Los endpoints y lo que lee cada uno están en [arquitectura.md](../arquitectura/arquitectura.md#servicio-en-el-droplet).
 
-Se decide en la fase 6.
+**Actualizar la API.** Como la API lee oro en cada consulta, los datos nuevos aparecen solos después de cada corrida del job. Solo hay que volver a desplegar cuando cambia el código de la API.
 
-**Otras notas:**
+**Puntos extra del enunciado:** CI/CD hacia el Droplet y pruebas automatizadas de la API. Una opción es que un workflow, al hacer merge de cambios en `api/`, entre por ssh y reinicie el contenedor. Requiere guardar `DROPLET_HOST` y una llave de despliegue como secretos de GitHub, con autorización del catedrático.
+
+**Notas:**
 
 1. El Droplet es pequeño. La imagen no debe incluir librerías pesadas como torch.
-2. Si da tiempo de aceptar fotos como entrada, Tesseract sí se puede instalar dentro de la imagen de Docker.
-3. Ambientes: uv para desarrollo local y Docker para el Droplet. La equivalencia con venv y conda se documenta como en el Taller 2.
+2. Ambientes: uv para desarrollo local y Docker para el Droplet. La equivalencia con venv y conda se documenta como en el Taller 2.

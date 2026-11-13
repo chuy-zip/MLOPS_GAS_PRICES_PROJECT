@@ -5,7 +5,7 @@
 # MAGIC Corre `databricks/sql/tablas.sql`, que define las columnas y los tipos de cada tabla del pipeline.
 # MAGIC Usa `CREATE TABLE IF NOT EXISTS`: las tablas que ya existen no se modifican.
 # MAGIC
-# MAGIC Es la única tarea del job `gas_price_setup`, que el CI corre después de cada despliegue.
+# MAGIC Es la única tarea del job `equipo-01-setup` (clave `gas_price_setup` en el bundle), que el CI corre después de cada despliegue.
 # MAGIC También se puede correr a mano, por ejemplo después de borrar una tabla.
 # MAGIC
 # MAGIC Las demás tareas escriben con `insertInto`, que respeta la definición de la tabla.
@@ -13,7 +13,7 @@
 
 # COMMAND ----------
 
-dbutils.widgets.text("catalogo", "gas_price")
+dbutils.widgets.text("catalogo", "equipo_01")
 dbutils.widgets.text("esquema_bronze", "bronze")
 dbutils.widgets.text("esquema_silver", "silver")
 dbutils.widgets.text("esquema_gold", "gold")

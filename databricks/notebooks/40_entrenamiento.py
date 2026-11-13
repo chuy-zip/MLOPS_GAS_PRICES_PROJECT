@@ -7,14 +7,16 @@
 # MAGIC    Registra las métricas del modelo y de la regla "repetir la semana pasada", para comparar.
 # MAGIC 3. Entrena el modelo final con todas las semanas que tienen etiqueta.
 # MAGIC 4. Lo registra en Unity Catalog con firma y le asigna el alias `champion`.
+# MAGIC 5. Agrega una fila a `gold.metricas_modelo` con las métricas del modelo y de la línea base, para la API.
 # MAGIC
 # MAGIC El modelo y la evaluación están en `src/gas_price/modelo.py`. No hay un mínimo de desempeño para registrarlo.
+# MAGIC La línea base del enunciado es "se repite la dirección de la semana anterior".
 
 # COMMAND ----------
 
-dbutils.widgets.text("catalogo", "gas_price")
+dbutils.widgets.text("catalogo", "equipo_01")
 dbutils.widgets.text("esquema_gold", "gold")
-dbutils.widgets.text("experimento", "/Shared/gas_price_tendencia")
+dbutils.widgets.text("experimento", "/Shared/equipo-01-tendencia")
 
 catalogo = dbutils.widgets.get("catalogo")
 esquema_gold = dbutils.widgets.get("esquema_gold")
@@ -46,10 +48,13 @@ mlflow.set_experiment(experimento)
 semanales = spark.table(f"{catalogo}.{esquema_gold}.features_semanales").toPandas()
 datos = modelo.con_etiqueta(semanales)
 
-# Huella de los datos de entrenamiento. Si ya hay una corrida con la misma huella, no se vuelve a entrenar.
+# Huella de los datos de entrenamiento. Si ya hay una corrida con la misma huella para el mismo modelo,
+# no se vuelve a entrenar. Filtrar también por modelo hace que un catálogo nuevo siempre entrene.
 columnas = [*features.VARIABLES, "etiqueta"]
 huella = hashlib.sha256(pd.util.hash_pandas_object(datos[columnas], index=False).values.tobytes()).hexdigest()
-previas = mlflow.search_runs(filter_string=f"tags.huella_datos = '{huella}'", max_results=1)
+previas = mlflow.search_runs(
+    filter_string=f"tags.huella_datos = '{huella}' and tags.modelo = '{NOMBRE_MODELO}'", max_results=1
+)
 if len(previas) > 0:
     dbutils.notebook.exit(f"Sin cambios: estos datos ya se usaron en la corrida {previas.iloc[0]['run_id']}")
 
@@ -71,7 +76,7 @@ with mlflow.start_run(run_name="logistica_mem_eia") as corrida:
             "variables": ",".join(features.VARIABLES),
         }
     )
-    mlflow.set_tags({"huella_datos": huella, "fuentes": "mem,eia"})
+    mlflow.set_tags({"huella_datos": huella, "modelo": NOMBRE_MODELO, "fuentes": "mem,eia"})
 
     # El modelo final aprende de todas las semanas. Las métricas de arriba vienen de la evaluación con el pasado.
     final = modelo.construir_modelo().fit(datos[features.VARIABLES], datos["etiqueta"])
@@ -95,6 +100,18 @@ print(pd.Series(resultado).to_string())
 version = info.registered_model_version
 MlflowClient().set_registered_model_alias(NOMBRE_MODELO, ALIAS, version)
 print(f"{NOMBRE_MODELO}@{ALIAS} apunta a la versión {version}")
+
+# COMMAND ----------
+
+# Métricas para la API. La tabla la define databricks/sql/tablas.sql.
+TABLA_METRICAS = f"{catalogo}.{esquema_gold}.metricas_modelo"
+from pyspark.sql import functions as F
+
+metricas = spark.createDataFrame(modelo.fila_de_metricas(resultado, version)).withColumn(
+    "entrenado_en", F.current_timestamp()
+)
+metricas.select(*spark.table(TABLA_METRICAS).columns).write.insertInto(TABLA_METRICAS)
+display(spark.table(TABLA_METRICAS).orderBy(F.col("entrenado_en").desc()))
 
 # COMMAND ----------
 

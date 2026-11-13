@@ -1,44 +1,57 @@
-# MLOPS_GAS_PRICES_PROJECT
+# equipo-01-gasolina-gt
 
-Proyecto final de MLOps: monitoreo del precio de la gasolina en Guatemala.
+Proyecto final de MLOps, Equipo 01: predicción del precio de la gasolina en Guatemala.
 
-El usuario ingresa el precio de la gasolina de hoy y el sistema responde si es un buen precio y si se espera que suba o baje en el próximo cambio de referencia.
+Un pipeline de punta a punta en Databricks convierte fotos de precios y datos oficiales en tablas Delta con la arquitectura medallón. Con eso predice si el precio de la gasolina súper, regular y el diésel subirá, bajará o se mantendrá la semana siguiente. Una API en un Droplet de DigitalOcean publica los precios y las predicciones de la capa de oro.
 
-Toda la documentación está en [docs/](docs/README.md). El punto de partida es el [plan de implementación](docs/plan/plan_implementacion.md).
+El enunciado oficial está en [docs/contexto/](docs/contexto/). Toda la documentación está en [docs/](docs/README.md), y el punto de partida es el [plan de implementación](docs/plan/plan_implementacion.md).
 
 > [!IMPORTANT]
-> **Los datos se actualizan cada lunes, a mano.** El MEM cambia el precio oficial casi siempre los lunes. Nada descarga el Excel del MEM de forma automática. Si nadie lo actualiza, la API sigue comparando contra el precio de la última actualización y el modelo predice con datos viejos. Ver [Actualizar los datos](#actualizar-los-datos).
+> **El Excel del MEM se actualiza a mano cada lunes.** El job corre solo cada martes, pero nada descarga el Excel del MEM de forma automática. Si nadie lo actualiza, la referencia y la predicción se calculan con la semana anterior. Ver [Actualizar los datos](#actualizar-los-datos).
 
 ## Cómo funciona
 
 ```mermaid
 flowchart LR
-    MEM["Excel del MEM<br/>data/mem"] --> B["Bronce"]
+    FOTOS["Fotos de precios<br/>bucket S3"] --> B["Bronce"]
+    MEM["Excel del MEM<br/>data/mem"] --> B
     EIA["Precios de la EIA<br/>data/eia"] --> B
-    FOTOS["Fotos en raw"] --> B
-    B --> P["Plata"] --> O["Oro"] --> M["Modelo en MLflow"]
+    B --> P["Plata"] --> O["Oro"]
+    O --> M["Modelo en MLflow"]
+    M --> O
     O --> API["API en el Droplet"]
-    M --> API
 ```
 
-1. Los datos del MEM y de la EIA se versionan en `data/`. Cada cambio llega por pull request y pasa un test de "no empeorar".
-2. El job `gas_price_pipeline` de Databricks los lleva de bronce a oro y entrena el modelo.
-3. El modelo y la referencia de precios se empaquetan en la API que corre en el Droplet.
+1. **Fuente principal: las fotos de precios** que comparte el catedrático. Se leen desde S3 por una external location y se convierten en precios estructurados.
+2. **Fuentes complementarias,** que el enunciado permite para tener más historia: el Excel de precios del MEM, desde 2013, y el precio internacional de la gasolina y el diésel publicado por la EIA. Se versionan en `data/` y cada cambio pasa un test de "no empeorar".
+3. **El job `equipo-01-pipeline`** lleva los datos de bronce a oro, entrena el modelo, lo registra en MLflow y guarda la predicción de la semana siguiente en `gold.predicciones`. Corre cada martes y avisa por correo si falla.
+4. **La API** lee las tablas de oro y responde con los precios, la predicción y las métricas del modelo.
 
 ## Estructura
 
 | Carpeta | Contenido |
 |---|---|
-| `databricks.yml`, `resources/` | Bundle de Databricks: jobs y sus tareas |
+| `databricks.yml`, `resources/` | Bundle de Databricks: los jobs, sus tareas, parámetros, programación y alertas |
 | `databricks/notebooks/` | Un notebook por tarea del pipeline |
-| `databricks/sql/tablas.sql` | Columnas y tipos de todas las tablas. Para cambiar una tabla, ver [Cómo cambiar una tabla](docs/datos/esquemas_medallion.md#cómo-cambiar-una-tabla) |
-| `src/gas_price/` | Código compartido: lectores del MEM y la EIA, variables y modelo |
-| `tests/` | Tests del paquete y de "no empeorar" los datos |
+| `databricks/sql/tablas.sql` | Columnas, tipos y comentarios de todas las tablas. Para cambiar una tabla, ver [Cómo cambiar una tabla](docs/datos/esquemas_medallion.md#cómo-cambiar-una-tabla) |
+| `src/gas_price/` | Código compartido: lectores del MEM y la EIA, variables, modelo y predicción |
+| `tests/` | Tests del paquete, de "no empeorar" los datos y de la definición de las tablas |
 | `scripts/` | Actualizar la EIA y evaluar el modelo en local |
 | `data/` | Excel del MEM y archivos de la EIA |
 | `infra/sql/` | Catálogo, esquemas y volumen de Unity Catalog |
-| `.github/workflows/` | Plan del bundle y tests en cada PR, despliegue al hacer merge |
-| `docs/` | Documentación |
+| `.github/workflows/` | Plan del bundle y tests en cada PR. Despliegue y creación de tablas al hacer merge |
+| `docs/` | Documentación, enunciado y diagramas |
+
+**Equivalencia con la estructura sugerida en el enunciado:**
+
+| Enunciado | Este repo | Por qué |
+|---|---|---|
+| `pipelines/01_bronze.py`, `02_silver.py`, `03_gold.py` | `databricks/notebooks/`, con prefijos 1x para bronce, 2x para plata, 3x a 5x para oro | Un notebook por fuente y por paso. Cada tarea se puede probar y volver a correr por separado |
+| `pipelines/job.json` | `resources/pipeline.yml` | El job se define como código con un bundle de Databricks y lo despliega el CI. Ver [ci_cd.md](docs/infraestructura/ci_cd.md) |
+| `api/` | `api/` | Por hacer |
+| `docs/arquitectura.png` y su fuente editable | Por hacer | |
+| `docs/informe.pdf` | Por hacer | |
+| `presentacion/` | Por hacer | |
 
 ## Uso local
 
@@ -53,21 +66,18 @@ pip install -e ".[test]"
 | Comando | Para qué |
 |---|---|
 | `pytest` | Correr los tests |
-| `python scripts/evaluar_modelo.py` | Evaluar el modelo con los datos de `data/` |
+| `python scripts/evaluar_modelo.py` | Evaluar el modelo contra la línea base con los datos de `data/` |
 | `python scripts/actualizar_eia.py` | Descargar los precios nuevos de la EIA |
 
 ## Actualizar los datos
 
-Cada lunes, después de que el MEM publique el precio nuevo:
+Cada lunes, antes de que el job corra el martes:
 
 1. Crear una rama.
 2. Reemplazar `data/mem/precios_promedio_nacionales_diarios.xlsx` con la descarga más reciente del MEM.
 3. Correr `python scripts/actualizar_eia.py`.
 4. Abrir un pull request. Los checks `plan` y `tests` tienen que pasar.
-5. Después del merge, correr el job `gas_price_pipeline` en Databricks.
-6. Reconstruir la imagen de la API, para que lleve la referencia y el modelo nuevos.
-
-**Qué se actualiza:** la referencia de precios, que es el precio oficial vigente de cada combustible. Contra ella se juzga si el precio del usuario es bueno. También se reentrena el modelo con la semana nueva.
+5. Hacer merge. El job del martes carga los datos nuevos. Para cargarlos antes, correr `equipo-01-pipeline` con **Run now**.
 
 Detalle en [fuentes_de_datos.md](docs/datos/fuentes_de_datos.md#ciclo-semanal-de-actualización).
 
@@ -75,9 +85,12 @@ Detalle en [fuentes_de_datos.md](docs/datos/fuentes_de_datos.md#ciclo-semanal-de
 
 | Qué | Dónde |
 |---|---|
-| Tablas | Catálogo `gas_price`, esquemas `bronze`, `silver` y `gold` |
-| Experimento | `/Shared/gas_price_tendencia` |
-| Modelo | `gas_price.gold.modelo_tendencia_precio`, alias `champion` |
-| Referencia de precios para la API | `gas_price.gold.referencia_actual` |
+| Tablas | Catálogo `equipo_01`, esquemas `bronze`, `silver` y `gold` |
+| Predicción de la semana siguiente | `equipo_01.gold.predicciones` |
+| Métricas del modelo y de la línea base | `equipo_01.gold.metricas_modelo` |
+| Precio oficial vigente | `equipo_01.gold.referencia_actual` |
+| Experimento | `/Shared/equipo-01-tendencia` |
+| Modelo | `equipo_01.gold.modelo_tendencia_precio`, alias `champion` |
+| Jobs | `equipo-01-pipeline`, `equipo-01-setup` y `equipo-01-exploracion` |
 
 Solo el CI despliega a Databricks. Ver [ci_cd.md](docs/infraestructura/ci_cd.md).
