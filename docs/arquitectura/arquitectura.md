@@ -99,8 +99,10 @@ MLOPS_GAS_PRICES_PROJECT/
 ├── .github/workflows/      plan y despliegue del bundle
 ├── docs/
 ├── data/
-│   └── mem/
+│   ├── mem/
+│   └── eia/
 ├── infra/sql/              script de catálogo y esquemas
+├── scripts/                actualización de los datos de la EIA
 ├── src/gas_price/
 ├── tests/
 └── serving/

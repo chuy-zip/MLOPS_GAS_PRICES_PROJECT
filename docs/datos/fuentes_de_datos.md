@@ -69,7 +69,21 @@ Si un cambio de precio histórico es intencional, por ejemplo una corrección de
 
 **Formato:** archivo `.xls` con la hoja `Data 1`, dos filas de títulos y luego fecha y precio. Solo vienen los días con mercado abierto. El lector está en `src/gas_price/eia.py`.
 
-**Cómo se actualiza:** igual que el Excel del MEM. Se descarga el archivo de la página de cada serie, en "Download Data (XLS File)", se reemplaza en una rama y se abre un pull request. El test de "no empeorar" compara contra `main`. Databricks lo lee desde el repo público, porque no está confirmado que `eia.gov` esté entre los dominios permitidos de Free Edition.
+**Cómo se actualiza:** con un script, desde la raíz del repo y con el paquete instalado:
+
+```
+git switch -c datos/actualizacion-eia
+python scripts/actualizar_eia.py
+```
+
+1. El script descarga las dos series y valida cada una con las reglas de "no empeorar" antes de reemplazar el archivo.
+2. Si una serie tiene problemas, no la toca y los muestra.
+3. Al final imprime cuántos días nuevos trae cada serie.
+4. Después se hace commit y se abre un pull request, que vuelve a pasar por el test de "no empeorar".
+
+Se prefirió un script a un workflow programado: un workflow abriría un pull request automático cada semana y necesitaría un token extra. Con el script, una persona decide cuándo actualizar, por ejemplo junto con el Excel del MEM.
+
+Databricks lee los archivos desde el repo público, porque no está confirmado que `eia.gov` esté entre los dominios permitidos de Free Edition.
 
 ## 3. Fotos de dispensadores
 

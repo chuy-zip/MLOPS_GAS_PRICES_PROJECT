@@ -29,7 +29,7 @@ Fuente: [documentación de comandos de bundles](https://docs.databricks.com/aws/
 Para que nadie tenga una versión distinta desplegada:
 
 1. **Solo el CI despliega**, y solo desde `main`. El workflow de despliegue solo corre al hacer merge a `main`. Nadie corre `databricks bundle deploy` desde su computadora.
-2. **El bundle tiene un solo destino**, `prod`. Sus archivos y su estado viven en `/Workspace/Shared/.bundle/gas_price/prod`, visibles para todo el equipo. El grupo `users` tiene `CAN_MANAGE` sobre los jobs, declarado en `databricks.yml`. Solo se suben los notebooks, el código de `src/` y la configuración: `docs/`, `data/`, `.github/`, `tests/` e `infra/` quedan fuera con `sync.exclude`.
+2. **El bundle tiene un solo destino**, `prod`. Sus archivos y su estado viven en `/Workspace/Shared/.bundle/gas_price/prod`, visibles para todo el equipo. El grupo `users` tiene `CAN_MANAGE` sobre los jobs, declarado en `databricks.yml`. Solo se suben los notebooks, el código de `src/` y la configuración: `docs/`, `data/`, `.github/`, `tests/`, `infra/` y `scripts/` quedan fuera con `sync.exclude`.
 3. **Los cambios llegan por pull request.** Un ruleset de GitHub sobre `main` exige que el check `plan` esté en verde para hacer merge. También exige el check `tests`. No exige aprobaciones.
 4. **Un despliegue a la vez:** el workflow de despliegue usa `concurrency` de GitHub Actions para no correr dos despliegues juntos.
 5. **Una corrida a la vez:** los jobs tienen `max_concurrent_runs: 1`. Si dos personas lanzan el mismo job, la segunda corrida espera. Ayuda también con el límite de 5 tareas de Free Edition.
