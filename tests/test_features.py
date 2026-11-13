@@ -55,6 +55,18 @@ def test_features_etiqueta_es_el_cambio_de_la_semana_siguiente():
     assert superior["etiqueta"].iloc[-1] is None, "La última semana todavía no tiene etiqueta"
 
 
+def test_semana_incompleta_no_inventa_etiqueta():
+    # Los datos terminan un martes con un cambio de precio. La semana del lunes 16 todavía no llega.
+    precios = lunes_con_precios([30.0] * 10)
+    precios["2026-03-10"] = 35.0
+    diarios = features.precios_diarios(oficiales(precios))
+    semanales = features.features_semanales(diarios, internacionales("2025-12-01", 120))
+    superior = semanales[semanales["combustible"] == "super"].set_index("semana")
+
+    assert superior.index.max() == dt.date(2026, 3, 9), "No debe existir la semana que todavía no termina"
+    assert superior.loc[dt.date(2026, 3, 9), "etiqueta"] is None, "El lunes más reciente es el que se va a predecir"
+
+
 def test_features_no_usa_el_precio_internacional_del_mismo_lunes():
     precios = lunes_con_precios([30.0] * 12)
     diarios = features.precios_diarios(oficiales(precios))

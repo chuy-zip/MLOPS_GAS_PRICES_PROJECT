@@ -97,8 +97,13 @@ def features_semanales(diarios: pd.DataFrame, precios_internacionales: pd.DataFr
     tipo_cambio = diarios.groupby("fecha")["tipo_cambio"].first()
     tipo_cambio.index = pd.to_datetime(tipo_cambio.index)
 
+    # Si el último dato no es lunes, resample crea una semana que todavía no termina,
+    # con el precio de un día que no es lunes. Se descarta para no inventar un cambio.
+    ultimo_dia = ancho.index.max()
     semanal = ancho.resample(DIA_DE_CAMBIO).last()
+    semanal = semanal[semanal.index <= ultimo_dia]
     tc_semanal = tipo_cambio.resample(DIA_DE_CAMBIO).last()
+    tc_semanal = tc_semanal[tc_semanal.index <= ultimo_dia]
     internacional = _internacional_antes_del_lunes(precios_internacionales, semanal.index)
 
     partes = []

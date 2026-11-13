@@ -33,6 +33,8 @@ La API también devuelve cuántos días faltan para el próximo cambio. Así el 
 
 Antes de entrenar hay que confirmar con los datos qué día de la semana se toma como cambio. Si hay semanas con dos cambios o sin cambio, la semana se cuenta igual: la etiqueta compara el precio al inicio de la semana siguiente contra el precio de hoy.
 
+**Semanas incompletas.** Solo se usan semanas completas. Si el último dato del Excel no es lunes, esos días no forman una semana nueva. El lunes más reciente queda sin etiqueta, porque es el que el modelo tiene que predecir.
+
 ## Datos de entrenamiento
 
 1. **Fuente:** `gold.features_semanales`, construida a partir del Excel del MEM.
@@ -56,12 +58,12 @@ Antes de entrenar hay que confirmar con los datos qué día de la semana se toma
 python scripts/evaluar_modelo.py
 ```
 
-Resultado con los datos al 2026-11-12, prueba desde el 18 de noviembre de 2024:
+Resultado con los datos al 2026-11-12, prueba desde el 11 de noviembre de 2024:
 
 | Métrica | Modelo | Repetir la semana pasada |
 |---|---|---|
-| Balanced accuracy | 0.55 | 0.45 |
-| F1 macro | 0.55 | 0.45 |
+| Balanced accuracy | 0.55 | 0.46 |
+| F1 macro | 0.55 | 0.46 |
 | Dirección correcta cuando hay movimiento | 0.74 | 0.64 |
 
 ## Prueba de viabilidad (2026-11-12)
