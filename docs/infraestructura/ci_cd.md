@@ -22,7 +22,13 @@ Fuente: [documentación de comandos de bundles](https://docs.databricks.com/aws/
 
 **Por qué no Terraform.** Terraform necesita guardar su estado en un lugar compartido, como S3 o HCP Terraform. No tenemos S3 y HCP Terraform agregaría otra cuenta. Además, el Droplet no lo administramos nosotros, así que no hay nada fuera de Databricks que crear con código. Los bundles cubren lo que sí necesitamos.
 
-**Lo que no hacen los bundles:** la documentación no confirma que manejen catálogos ni permisos. El catálogo, los esquemas y el volumen se crean una sola vez con el script `infra/sql/00_unity_catalog.sql`, que un administrador corre a mano. Así el token del CI no necesita permisos sobre las external locations.
+**Qué maneja el bundle y qué no.** Según la [lista de recursos de bundles](https://docs.databricks.com/aws/en/dev-tools/bundles/resources), un bundle puede definir catálogos, esquemas, volúmenes y modelos registrados, pero **no tablas**: no existe un recurso `table` ni forma de declarar columnas. En este proyecto:
+
+| Objeto | Cómo se define |
+|---|---|
+| Jobs y sus tareas | Bundle, en `resources/` |
+| Catálogo, esquemas y volumen | Script `infra/sql/00_unity_catalog.sql`, corrido una vez a mano. El bundle también podría definirlos, pero ya existen y casi no cambian. Además, un `bundle destroy` los borraría con todo su contenido |
+| Tablas, con sus columnas y tipos | `databricks/sql/tablas.sql`. Lo corre el job `gas_price_setup`, que el workflow de despliegue lanza justo después de `bundle deploy`. Así la estructura se aplica al hacer merge, igual que los jobs, y el pipeline solo procesa datos |
 
 ## Un solo ambiente compartido
 
@@ -72,7 +78,7 @@ Un mismo archivo no se edita en los dos lugares a la vez. Antes de empezar a edi
 | Workflow | Cuándo corre | Qué hace |
 |---|---|---|
 | `bundle-plan.yml` | Pull request a `main` | `bundle validate` y `bundle plan -t prod`. Publica el plan como comentario desplegable y lo actualiza en cada push. Ya existe |
-| `bundle-deploy.yml` | Merge a `main`, o a mano | `bundle validate` y `bundle deploy -t prod`. Ya existe |
+| `bundle-deploy.yml` | Merge a `main`, o a mano | `bundle validate`, `bundle deploy -t prod` y `bundle run gas_price_setup`, que crea las tablas que falten. Ya existe |
 | `tests.yml` | Pull request a `main` | Tests del paquete `gas_price` y test de "no empeorar" los archivos de `data/` contra la versión de `main`. Ya existe |
 | `run-pipeline.yml` | Merge a `main` que cambia algo en `data/` | Dispara el job del pipeline para cargar los datos nuevos. Fase 2 |
 | `build-api.yml` | Merge a `main` que toca `serving/` | Construye la imagen de la API y la publica. Fase 6 |

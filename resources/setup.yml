@@ -1,0 +1,21 @@
+resources:
+  jobs:
+    gas_price_setup:
+      name: gas_price_setup
+      description: Crea las tablas que falten según databricks/sql/tablas.sql. Lo corre el CI después de cada despliegue.
+      max_concurrent_runs: 1
+      tags:
+        proyecto: gas_price
+      parameters:
+        - name: catalogo
+          default: ${var.catalogo}
+        - name: esquema_bronze
+          default: ${var.esquema_bronze}
+        - name: esquema_silver
+          default: ${var.esquema_silver}
+        - name: esquema_gold
+          default: ${var.esquema_gold}
+      tasks:
+        - task_key: crear_tablas
+          notebook_task:
+            notebook_path: ../databricks/notebooks/05_crear_tablas.py

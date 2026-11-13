@@ -40,6 +40,14 @@ Corre a mano, cuando haga falta conocer los datos. No escribe nada.
 |---|---|---|
 | exploracion_raw | `00_exploracion_raw.py` | Inventario de archivos, EXIF y miniaturas de las fotos en raw |
 
+### Job de estructura: `gas_price_setup`
+
+Lo corre el CI después de cada despliegue. Se puede correr a mano, por ejemplo después de borrar una tabla.
+
+| Tarea | Notebook | Qué hace |
+|---|---|---|
+| crear_tablas | `05_crear_tablas.py` | Corre `databricks/sql/tablas.sql`. Crea las tablas que falten, con sus columnas y tipos. No modifica las que ya existen |
+
 ### Job del pipeline: `gas_price_pipeline`
 
 ```mermaid
@@ -96,6 +104,7 @@ MLOPS_GAS_PRICES_PROJECT/
 ├── databricks.yml          definición del bundle
 ├── resources/              jobs del bundle
 ├── databricks/notebooks/   notebooks de cada tarea
+├── databricks/sql/         definición de las tablas
 ├── .github/workflows/      plan y despliegue del bundle
 ├── docs/
 ├── data/

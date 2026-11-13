@@ -73,7 +73,8 @@ for serie, config in eia.SERIES.items():
     crudo["_hash_archivo"] = huella
 
     filas = spark.createDataFrame(crudo, schema=ESQUEMA).withColumn("_ingestado_en", F.current_timestamp())
-    filas.write.mode("append").saveAsTable(TABLA)
+    # La tabla la define databricks/sql/tablas.sql. insertInto respeta esa definición.
+    filas.select(*spark.table(TABLA).columns).write.insertInto(TABLA)
     resumen.append(f"{serie}: {len(crudo)} filas")
 
 print("\n".join(resumen))

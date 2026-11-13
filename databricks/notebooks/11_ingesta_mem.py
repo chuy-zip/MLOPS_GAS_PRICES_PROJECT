@@ -79,7 +79,8 @@ esquema = """
     _archivo_origen STRING, _url_origen STRING, _hash_archivo STRING
 """
 filas = spark.createDataFrame(crudo, schema=esquema).withColumn("_ingestado_en", F.current_timestamp())
-filas.write.mode("append").saveAsTable(TABLA)
+# La tabla la define databricks/sql/tablas.sql. insertInto respeta esa definición.
+filas.select(*spark.table(TABLA).columns).write.insertInto(TABLA)
 
 print(f"{len(crudo)} filas agregadas a {TABLA}")
 dbutils.notebook.exit(f"Cargadas {len(crudo)} filas")

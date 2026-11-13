@@ -37,6 +37,7 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 2026-11-12 | Fechas repetidas: si son idénticas se deja una fila, si difieren el pipeline falla | Las 3 fechas repetidas actuales son copias exactas |
 | 2026-11-12 | Primero se arma el pipeline completo del Excel hasta el modelo. Las tareas de fotos siguen vacías | El curso evalúa la ingeniería del pipeline. Las fotos se conectan después sin cambiar el resto |
 | 2026-11-12 | Se agregan los precios internacionales de la EIA como segunda fuente, versionados en `data/eia/` | Sin ese dato el modelo no supera a la regla de repetir la semana pasada. Con él sí. Ver [modelo.md](../modelo/modelo.md) |
+| 2026-11-12 | Las tablas se definen en `databricks/sql/tablas.sql`. Las crea el job `gas_price_setup`, que el CI corre después de cada despliegue | Los bundles no tienen un recurso para tablas. Así los tipos quedan versionados, una tarea no puede cambiar una tabla en silencio y la estructura se aplica al hacer merge, separada del procesamiento de datos |
 | 2026-11-11 | El Droplet no se administra desde el proyecto. Una persona del equipo tiene acceso por ssh con sudo | El Droplet lo provee el curso |
 
 ## Decisiones pendientes
