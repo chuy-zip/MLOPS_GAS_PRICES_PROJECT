@@ -10,6 +10,8 @@ sync:
     - docs/**
     - data/**
     - .github/**
+    - tests/**
+    - infra/**
     - README.md
 
 # El bundle vive en /Workspace/Shared a propósito: es un ambiente compartido por el equipo.

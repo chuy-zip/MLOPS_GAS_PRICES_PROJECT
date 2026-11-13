@@ -61,6 +61,8 @@ En el resto de los documentos, `bronze.tabla` abrevia la tabla en el esquema de 
 | _hash_archivo | STRING | Si no cambió, no se vuelve a cargar |
 | _ingestado_en | TIMESTAMP | |
 
+**`bronze.eia_precios`**: una fila por fila de cada archivo de la EIA, todo como texto. Columnas: serie, fecha_texto, precio_texto, _archivo_origen, _commit_origen, _hash_archivo y _ingestado_en.
+
 ## Plata
 
 **`silver.imagenes_metadata`**: una fila por foto.
@@ -82,7 +84,14 @@ No se usa la hora del GPS como fecha: `GPSTimeStamp` solo está en el 83 % de la
 
 Si se decide sacar más datos de las imágenes, sus tablas se agregan aquí. Ver el tema abierto en [fuentes_de_datos.md](fuentes_de_datos.md).
 
-**`silver.precios_oficiales`**: formato largo, una fila por fecha y combustible. Columnas: fecha, combustible, precio_gtq_galon, tipo_cambio, regimen_fiscal y _archivo_origen. Sin fechas duplicadas.
+**`silver.precios_oficiales`**: formato largo, una fila por fecha y combustible. Columnas: fecha, combustible, precio_gtq_galon, tipo_cambio, regimen_fiscal y _archivo_origen.
+
+1. `combustible` toma los valores `super`, `regular` y `diesel`.
+2. Los días con precio en 0 no tienen fila, porque ese día no hubo publicación.
+3. Las fechas repetidas con valores idénticos quedan una sola vez.
+4. `regimen_fiscal` vale `normal`, `subsidio` o `exento`, según las notas del Excel.
+
+**`silver.precios_internacionales`**: una fila por día de mercado y serie. Columnas: fecha, serie (`gasolina` o `diesel`), precio_usd_galon y _archivo_origen. Los fines de semana y feriados no tienen fila. Oro los rellena con el último precio conocido.
 
 ## Oro
 
@@ -100,7 +109,7 @@ Si se decide sacar más datos de las imágenes, sus tablas se agregan aquí. Ver
 
 **Regla de relleno:** el precio oficial se mantiene igual entre un cambio y el siguiente. Un día faltante toma el último precio conocido y queda marcado con `es_imputado`. Las fotos nunca rellenan el precio oficial.
 
-**`gold.features_semanales`**: una fila por semana y combustible, con el cambio de la semana, rezagos, tendencia, tipo de cambio, régimen fiscal y la etiqueta del cambio de la semana siguiente.
+**`gold.features_semanales`**: una fila por semana y combustible, con el cambio de la semana, rezagos, tendencia, tipo de cambio, régimen fiscal, variables del precio internacional y la etiqueta del cambio de la semana siguiente. El precio internacional de cada lunes es el promedio de los 7 días anteriores, para usar solo lo que ya se sabía ese día.
 
 **`gold.referencia_actual`**: el último precio de referencia por combustible y el rango de "buen precio". Es lo que consulta la API.
 

@@ -29,8 +29,8 @@ Fuente: [documentación de comandos de bundles](https://docs.databricks.com/aws/
 Para que nadie tenga una versión distinta desplegada:
 
 1. **Solo el CI despliega**, y solo desde `main`. El workflow de despliegue solo corre al hacer merge a `main`. Nadie corre `databricks bundle deploy` desde su computadora.
-2. **El bundle tiene un solo destino**, `prod`. Sus archivos y su estado viven en `/Workspace/Shared/.bundle/gas_price/prod`, visibles para todo el equipo. El grupo `users` tiene `CAN_MANAGE` sobre los jobs, declarado en `databricks.yml`. Solo se suben los notebooks y la configuración: `docs/`, `data/` y `.github/` quedan fuera con `sync.exclude`.
-3. **Los cambios llegan por pull request.** Un ruleset de GitHub sobre `main` exige que el check `plan` esté en verde para hacer merge. No exige aprobaciones. Cuando exista el workflow de tests, su check se agrega a la lista.
+2. **El bundle tiene un solo destino**, `prod`. Sus archivos y su estado viven en `/Workspace/Shared/.bundle/gas_price/prod`, visibles para todo el equipo. El grupo `users` tiene `CAN_MANAGE` sobre los jobs, declarado en `databricks.yml`. Solo se suben los notebooks, el código de `src/` y la configuración: `docs/`, `data/`, `.github/`, `tests/` e `infra/` quedan fuera con `sync.exclude`.
+3. **Los cambios llegan por pull request.** Un ruleset de GitHub sobre `main` exige que el check `plan` esté en verde para hacer merge. También exige el check `tests`. No exige aprobaciones.
 4. **Un despliegue a la vez:** el workflow de despliegue usa `concurrency` de GitHub Actions para no correr dos despliegues juntos.
 5. **Una corrida a la vez:** los jobs tienen `max_concurrent_runs: 1`. Si dos personas lanzan el mismo job, la segunda corrida espera. Ayuda también con el límite de 5 tareas de Free Edition.
 
@@ -73,8 +73,8 @@ Un mismo archivo no se edita en los dos lugares a la vez. Antes de empezar a edi
 |---|---|---|
 | `bundle-plan.yml` | Pull request a `main` | `bundle validate` y `bundle plan -t prod`. Publica el plan como comentario desplegable y lo actualiza en cada push. Ya existe |
 | `bundle-deploy.yml` | Merge a `main`, o a mano | `bundle validate` y `bundle deploy -t prod`. Ya existe |
-| `tests.yml` | Pull request | Tests del paquete y test de "no empeorar" el Excel. Fase 2 |
-| `run-pipeline.yml` | Merge a `main` que cambia el Excel del MEM | Dispara el job del pipeline para cargar el Excel nuevo. Fase 2 |
+| `tests.yml` | Pull request a `main` | Tests del paquete `gas_price` y test de "no empeorar" los archivos de `data/` contra la versión de `main`. Ya existe |
+| `run-pipeline.yml` | Merge a `main` que cambia algo en `data/` | Dispara el job del pipeline para cargar los datos nuevos. Fase 2 |
 | `build-api.yml` | Merge a `main` que toca `serving/` | Construye la imagen de la API y la publica. Fase 6 |
 
 GitHub Actions no transforma datos. Solo valida, despliega y dispara jobs. El procesamiento ocurre en Databricks.

@@ -33,6 +33,10 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 2026-11-11 | Los jobs y notebooks se despliegan con bundles de Databricks. No se usa Terraform | Sin cuentas externas y el estado vive en el workspace. Ver [ci_cd.md](../infraestructura/ci_cd.md) |
 | 2026-11-11 | Un solo ambiente compartido. Solo el CI despliega, y solo desde `main` | Evita que cada persona tenga una versión distinta desplegada |
 | 2026-11-11 | El catálogo y los esquemas se crean una sola vez con un script SQL versionado | Son pocos objetos y no cambian |
+| 2026-11-12 | El Excel del MEM no se edita a mano. Los duplicados y los precios en 0 se resuelven en plata | El archivo queda igual a la publicación original y las reglas quedan versionadas en `src/gas_price/mem.py` |
+| 2026-11-12 | Fechas repetidas: si son idénticas se deja una fila, si difieren el pipeline falla | Las 3 fechas repetidas actuales son copias exactas |
+| 2026-11-12 | Primero se arma el pipeline completo del Excel hasta el modelo. Las tareas de fotos siguen vacías | El curso evalúa la ingeniería del pipeline. Las fotos se conectan después sin cambiar el resto |
+| 2026-11-12 | Se agregan los precios internacionales de la EIA como segunda fuente, versionados en `data/eia/` | Sin ese dato el modelo no supera a la regla de repetir la semana pasada. Con él sí. Ver [modelo.md](../modelo/modelo.md) |
 | 2026-11-11 | El Droplet no se administra desde el proyecto. Una persona del equipo tiene acceso por ssh con sudo | El Droplet lo provee el curso |
 
 ## Decisiones pendientes
@@ -59,12 +63,16 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 1 | Prueba de permisos: esquema con ubicación en el bucket de bronce | Ricardo | Hecho: falló, `xloc-cusn` es de solo lectura |
 | 1 | Revisar si `xloc-ag` y `xloc-au` también son de solo lectura | Ricardo | Hecho: plata es de solo lectura, oro permite escritura |
 | 1 | Prueba de permisos: esquema con ubicación en el bucket de oro | Ricardo | Hecho: falló, falta `CREATE MANAGED STORAGE` |
-| 1 | Script SQL que crea el catálogo, los esquemas y el volumen | | Pendiente |
-| 1 | Paquete `gas_price` vacío con `pyproject.toml` | | Pendiente |
-| 2 | Test de "no empeorar" el Excel del MEM | | Pendiente |
+| 1 | Script SQL que crea el catálogo, los esquemas y el volumen | Ricardo | Hecho. Falta correrlo en el SQL Editor |
+| 1 | Paquete `gas_price` con el lector del Excel del MEM | Ricardo | Hecho |
+| 2 | Test de "no empeorar" el Excel del MEM y workflow `tests.yml` | Ricardo | Hecho |
+| 2 | Agregar el check `tests` al ruleset de `main` | | Pendiente |
 | 2 | Tarea de ingesta del Excel a bronce | | Pendiente |
+| 2 | Lector de los archivos de la EIA y sus tests | Ricardo | Hecho |
+| 2 | Tarea de ingesta de la EIA a bronce | | Pendiente |
 | 2 | Tarea de ingesta de fotos a bronce con Auto Loader | | Pendiente |
 | 3 | Tarea del Excel a plata | | Pendiente |
+| 3 | Tarea de la EIA a plata | | Pendiente |
 | 3 | Tarea de EXIF a plata | | Pendiente |
 | 3 | Definir cómo se aprovechan las fotos más allá del EXIF | | Pendiente |
 | 4 | Tarea de plata a oro, incluyendo la definición de la semana y del próximo cambio | | Pendiente |
@@ -89,4 +97,6 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 2026-11-11 | Se adoptaron los bundles con un solo ambiente compartido y se descartó Terraform |
 | 2026-11-11 | Se creó el repo propio, se movió la documentación y se armaron el bundle y los workflows de plan y despliegue |
 | 2026-11-12 | Primer despliegue por CI: los dos jobs quedaron en el workspace. Se corrió la exploración: 110 fotos de diciembre 2022 a noviembre 2026 |
+| 2026-11-12 | Se armó el paquete `gas_price` con el lector del Excel, los tests y el workflow de tests. Se encontró que los precios en 0 significan días sin publicación |
+| 2026-11-12 | Prueba local del modelo: con solo el MEM no supera a repetir la semana pasada. Se agregó la EIA como segunda fuente y con ella sí la supera |
 | 2026-11-12 | Se confirmó que las fotos del bucket son las originales. Los colores raros venían del modo oscuro de Databricks, que invierte las salidas de `displayHTML`. Se documentó en las lecciones aprendidas |
