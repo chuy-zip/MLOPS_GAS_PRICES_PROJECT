@@ -13,7 +13,7 @@
 
 # COMMAND ----------
 
-dbutils.widgets.text("catalogo", "gas_price")
+dbutils.widgets.text("catalogo", "equipo_01")
 dbutils.widgets.text("esquema_bronze", "bronze")
 dbutils.widgets.text("esquema_silver", "silver")
 

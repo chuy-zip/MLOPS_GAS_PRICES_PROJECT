@@ -1,11 +1,12 @@
 resources:
   jobs:
     gas_price_exploracion:
-      name: gas_price_exploracion
+      name: equipo-01-exploracion
       description: Exploración del bucket raw. Se corre a mano y no escribe nada.
       max_concurrent_runs: 1
       tags:
         proyecto: gas_price
+        equipo: equipo-01
       tasks:
         - task_key: exploracion_raw
           notebook_task:

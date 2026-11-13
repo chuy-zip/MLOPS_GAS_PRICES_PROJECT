@@ -4,11 +4,27 @@ Documento vivo. Aquí se registran las decisiones, las tareas y los avances. El 
 
 ## Objetivo
 
-Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto del dispensador). El sistema responde si es un buen precio y si se espera que suba o baje en el próximo cambio de referencia.
+Según el enunciado oficial, en `docs/contexto/`: un pipeline de punta a punta que monitorea el precio de los combustibles en Guatemala y predice si subirá o bajará la semana siguiente. La fuente principal son las fotos de precios del catedrático. El pipeline las guarda en S3, las convierte en datos con Databricks y la arquitectura medallón, y publica precios y predicciones en una API REST en un Droplet de DigitalOcean.
 
-**Dentro del alcance:** pipeline por capas en Databricks, modelo registrado con MLflow, API en un Droplet de DigitalOcean, despliegue desde el repo y CI/CD.
+**Además:** CI/CD del bundle de Databricks, fuentes complementarias del MEM y la EIA para la historia del modelo, y la comparación del precio del usuario contra la referencia oficial.
 
-**Fuera del alcance por ahora:** recomendar estación, monitoreo del modelo en producción y app móvil.
+**Fuera del alcance:** recomendar estación, monitoreo del modelo en producción y app móvil.
+
+## Cumplimiento del enunciado
+
+Puntos de la rúbrica y estado al 2026-11-13:
+
+| Criterio | Puntos | Estado |
+|---|---|---|
+| Capa bronce: fotos por external location, carga incremental y auditoría | 10 | Pendiente. MEM y EIA ya están en bronce como fuentes complementarias |
+| Capa plata: extracción de precios, 3 reglas de calidad, cuarentena y exactitud medida a mano | 15 | Pendiente |
+| Capa oro: precio semanal, variación, etiqueta de dirección y comentarios | 10 | Parcial. Faltan `precio_semanal` y `variacion_semanal`, que dependen de las fotos |
+| Modelo: validación temporal, comparación con la línea base y MLflow | 10 | Hecho. 0.55 contra 0.46 de la línea base |
+| Clusters y job: cómputo, job encadenado, programación y alertas | 10 | Hecho, salvo confirmar con el catedrático la equivalencia con serverless |
+| API en el Droplet | 20 | Pendiente. Faltan las credenciales de solo lectura para S3 |
+| Repositorio y README | 10 | Parcial. Faltan el diagrama exportado, la presentación y commits de todos |
+| Informe técnico | 5 | Pendiente |
+| Presentación y demo | 10 | Pendiente |
 
 ## Decisiones tomadas
 
@@ -39,55 +55,53 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 2026-11-12 | Se agregan los precios internacionales de la EIA como segunda fuente, versionados en `data/eia/` | Sin ese dato el modelo no supera a la regla de repetir la semana pasada. Con él sí. Ver [modelo.md](../modelo/modelo.md) |
 | 2026-11-12 | Las tablas se definen en `databricks/sql/tablas.sql`. Las crea el job `gas_price_setup`, que el CI corre después de cada despliegue | Los bundles no tienen un recurso para tablas. Así los tipos quedan versionados, una tarea no puede cambiar una tabla en silencio y la estructura se aplica al hacer merge, separada del procesamiento de datos |
 | 2026-11-11 | El Droplet no se administra desde el proyecto. Una persona del equipo tiene acceso por ssh con sudo | El Droplet lo provee el curso |
+| 2026-11-13 | Se adopta el enunciado oficial. Las fotos son la fuente principal. El MEM y la EIA quedan como fuentes complementarias | El enunciado lo define así y permite fuentes complementarias para la historia del modelo |
+| 2026-11-13 | Nombres según la convención del enunciado: catálogo `equipo_01`, jobs `equipo-01-*`, repo `equipo-01-gasolina-gt` y prefijo `equipo-01/` en los buckets | El enunciado los pide como entregables con nombre fijo |
+| 2026-11-13 | La etiqueta "igual" pasa a llamarse `se_mantiene` | Es el nombre del enunciado |
+| 2026-11-13 | La API lee oro directamente. El job guarda la predicción en `gold.predicciones` y las métricas en `gold.metricas_modelo`. La tarea 50 deja de publicar un archivo y pasa a predecir | El enunciado pide que la API lea oro. Así la API no carga el modelo |
+| 2026-11-13 | El job corre cada martes a las 8:00 y avisa por correo si falla | El enunciado pide programación o disparo por fotos, y una alerta. El MEM publica los martes |
+| 2026-11-13 | El job mantiene una tarea por fuente y por paso, en lugar de 3 tareas | Sigue el orden bronce, plata y oro. Cada tarea se prueba por separado. Se confirma con el catedrático |
 
 ## Decisiones pendientes
 
 | Decisión | Recomendación | Dónde se discute |
 |---|---|---|
-| Cómo se aprovechan las fotos más allá del EXIF | Tema abierto. Lo decide quien trabaje las fotos | [fuentes_de_datos.md](../datos/fuentes_de_datos.md) |
+| Técnica para extraer el precio de las fotos | OCR o modelo de visión, a elección de quien trabaje las fotos. Tesseract no se puede instalar en serverless | [fuentes_de_datos.md](../datos/fuentes_de_datos.md) |
+| Equivalencia entre los clusters del enunciado y serverless | Confirmar con el catedrático | [databricks.md](../infraestructura/databricks.md) |
+| Credenciales de solo lectura para que la API lea oro desde S3 | Pedirlas al catedrático | [ci_cd.md](../infraestructura/ci_cd.md) |
+| Ubicación de las fotos nuevas | El enunciado menciona `fotos/AAAA-MM-DD/` en el bucket de bronce. Las 110 actuales están en `xloc-raw`. Confirmar con el catedrático | [fuentes_de_datos.md](../datos/fuentes_de_datos.md) |
 
 ## Fases y tareas
 
+Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-11-13 están en la bitácora.
+
 | Fase | Tarea | Responsable | Estado |
 |---|---|---|---|
-| 0 | Revisar permisos de las external locations | Ricardo | Hecho |
-| 0 | Crear el repo propio y mover la documentación | Ricardo | Hecho |
-| 0 | Pedir al catedrático desactivar "Limit to read-only use" en bronce y plata, y otorgar `CREATE MANAGED STORAGE` en bronce, plata y oro | | Pendiente |
-| 1 | Bundle con el job de exploración y el job del pipeline con tareas vacías | Ricardo | Hecho |
-| 1 | Workflows de plan con comentario desplegable y de despliegue en `main` | Ricardo | Hecho |
-| 1 | Generar el token de Databricks y guardar `DATABRICKS_HOST` y `DATABRICKS_TOKEN` en GitHub | Ricardo | Hecho |
-| 1 | Primer pull request: revisar el comentario con el plan | Ricardo | Hecho |
-| 1 | Crear el ruleset de `main` con el check `plan` obligatorio | Ricardo | Hecho |
-| 1 | Merge a `main`: confirmar que los dos jobs aparecen en el workspace | Ricardo | Hecho |
-| 1 | Correr el job `gas_price_exploracion` y documentar cuántas fotos hay, de qué fechas y de qué lugares | Ricardo | Hecho. Ver [fuentes_de_datos.md](../datos/fuentes_de_datos.md) |
-| 1 | Prueba de permisos: crear el catálogo `gas_price` | Ricardo | Hecho |
-| 1 | Prueba de permisos: esquema con ubicación en el bucket de bronce | Ricardo | Hecho: falló, `xloc-cusn` es de solo lectura |
-| 1 | Revisar si `xloc-ag` y `xloc-au` también son de solo lectura | Ricardo | Hecho: plata es de solo lectura, oro permite escritura |
-| 1 | Prueba de permisos: esquema con ubicación en el bucket de oro | Ricardo | Hecho: falló, falta `CREATE MANAGED STORAGE` |
-| 1 | Script SQL que crea el catálogo, los esquemas y el volumen | Ricardo | Hecho. Falta correrlo en el SQL Editor |
-| 1 | Paquete `gas_price` con el lector del Excel del MEM | Ricardo | Hecho |
-| 2 | Test de "no empeorar" el Excel del MEM y workflow `tests.yml` | Ricardo | Hecho |
-| 2 | Agregar el check `tests` al ruleset de `main` | | Pendiente |
-| 2 | Tarea de ingesta del Excel a bronce | Ricardo | Escrita, falta probar en Databricks |
-| 2 | Lector de los archivos de la EIA y sus tests | Ricardo | Hecho |
-| 2 | Tarea de ingesta de la EIA a bronce | Ricardo | Escrita, falta probar en Databricks |
-| 2 | Tarea de ingesta de fotos a bronce con Auto Loader | | Pendiente |
-| 3 | Tarea del Excel a plata | Ricardo | Escrita, falta probar en Databricks |
-| 3 | Tarea de la EIA a plata | Ricardo | Escrita, falta probar en Databricks |
-| 3 | Tarea de EXIF a plata | | Pendiente |
-| 3 | Definir cómo se aprovechan las fotos más allá del EXIF | | Pendiente |
-| 4 | Tarea de plata a oro, incluyendo la definición de la semana y del próximo cambio | Ricardo | Escrita, falta probar en Databricks |
-| 5 | Tarea de entrenamiento y registro en MLflow | Ricardo | Escrita, falta probar en Databricks |
-| 5 | Script de evaluación local del modelo | Ricardo | Hecho |
-| 5 | Tarea que publica la referencia actual para la API | | Pendiente |
-| 6 | API con FastAPI y Docker en el Droplet | | Pendiente |
-| 6 | Frontend simple con entrada de precio | | Pendiente |
-| 7 | Entrada por foto en la API | | Opcional |
+| 0 | Pedir al catedrático desactivar "Limit to read-only use" en bronce y plata, y otorgar `CREATE MANAGED STORAGE` en bronce, plata y oro | Ricardo | Pendiente |
+| 0 | Mover las tablas a los buckets cuando lleguen los permisos | Ricardo | Pendiente |
+| 1 | Acceso ssh al Droplet verificado | | Pendiente |
+| 1 | `bronze.fotos_precios` con carga incremental y columnas de auditoría | | Pendiente |
+| 2 | Extracción de precios y `silver.precios` con 3 reglas de calidad | | Pendiente |
+| 2 | `silver.precios_rejected` con el motivo de cada rechazo | | Pendiente |
+| 2 | Revisión manual de al menos 20 fotos y porcentaje de acierto | | Pendiente |
+| 3 | MEM y EIA de bronce a oro, modelo, MLflow y job de punta a punta | Ricardo | Hecho |
+| 3 | `gold.predicciones` y `gold.metricas_modelo` | Ricardo | Hecho, falta probar en Databricks |
+| 3 | Programación semanal y alerta por correo | Ricardo | Hecho, falta probar en Databricks |
+| 3 | `gold.precio_semanal` y `gold.variacion_semanal` desde las fotos | | Pendiente |
+| 3 | Evidencia de al menos 2 corridas exitosas con fotos de semanas distintas | | Pendiente |
+| 4 | API con los endpoints del enunciado en el puerto del equipo | | Pendiente |
+| 4 | Pruebas de usuario final con `curl` o Postman | | Pendiente |
+| 5 | Diagrama de arquitectura exportado y su fuente editable | | Pendiente |
+| 5 | Informe técnico de máximo 5 páginas | | Pendiente |
+| 5 | Presentación, resumen de una página y demo | | Pendiente |
+| Extra | CI/CD hacia el Droplet o pruebas automatizadas de la API | | Opcional |
 
 ## Riesgos
 
 1. Puede que el catedrático no otorgue `CREATE MANAGED STORAGE`. En ese caso las tablas quedan en el almacenamiento por defecto y el código no cambia.
 2. Free Edition tiene cuotas de uso y un máximo de 5 tareas de job a la vez. Con varios desarrolladores probando al mismo tiempo, el cómputo puede apagarse el resto del día.
+3. Bronce y plata de fotos valen 25 puntos y todavía no empiezan. Es la parte con más peso pendiente.
+4. Sin credenciales de S3 para el Droplet, la API no puede leer oro como pide el enunciado.
 
 ## Bitácora
 
@@ -102,3 +116,5 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 2026-11-12 | Se armó el paquete `gas_price` con el lector del Excel, los tests y el workflow de tests. Se encontró que los precios en 0 significan días sin publicación |
 | 2026-11-12 | Prueba local del modelo: con solo el MEM no supera a repetir la semana pasada. Se agregó la EIA como segunda fuente y con ella sí la supera |
 | 2026-11-12 | Se confirmó que las fotos del bucket son las originales. Los colores raros venían del modo oscuro de Databricks, que invierte las salidas de `displayHTML`. Se documentó en las lecciones aprendidas |
+| 2026-11-12 | El job completo corre en unos 2 minutos. Modelo registrado con balanced accuracy de 0.55 contra 0.46 de la línea base. Tablas definidas en un DDL versionado |
+| 2026-11-13 | Se recibió el enunciado oficial. Se alinearon nombres, etiqueta, predicciones, métricas, programación, alertas y documentación |

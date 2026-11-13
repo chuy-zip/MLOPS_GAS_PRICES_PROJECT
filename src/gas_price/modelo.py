@@ -47,7 +47,7 @@ def particion_temporal(features: pd.DataFrame, semanas_de_prueba: int = SEMANAS_
 def repetir_semana_pasada(features: pd.DataFrame) -> np.ndarray:
     """Regla de comparación: predice la misma dirección que el último cambio."""
     cambio = features["cambio_l1"]
-    return np.select([cambio >= UMBRAL_CAMBIO, cambio <= -UMBRAL_CAMBIO], ["sube", "baja"], "igual")
+    return np.select([cambio >= UMBRAL_CAMBIO, cambio <= -UMBRAL_CAMBIO], ["sube", "baja"], "se_mantiene")
 
 
 def metricas(real, predicho, prefijo: str = "") -> dict:
@@ -75,3 +75,49 @@ def evaluar(features: pd.DataFrame, semanas_de_prueba: int = SEMANAS_DE_PRUEBA) 
         "inicio_prueba": str(prueba["semana"].min()),
     }
     return modelo, resultado
+
+
+def semana_a_predecir(features: pd.DataFrame) -> pd.DataFrame:
+    """Las filas del lunes más reciente: todavía no tienen etiqueta, porque el lunes siguiente no llega."""
+    ultima = features["semana"].max()
+    return features[(features["semana"] == ultima) & features["etiqueta"].isna()]
+
+
+def predecir(modelo, filas: pd.DataFrame, version_modelo: str) -> pd.DataFrame:
+    """Una fila por combustible con la predicción, su probabilidad y la de cada clase.
+
+    Es la base de `gold.predicciones`. `semana` es el lunes con los datos usados y
+    `semana_objetivo` el lunes cuyo cambio de precio se predice.
+    """
+    probabilidades = modelo.predict_proba(filas[VARIABLES])
+    clases = list(modelo.classes_)
+    resultado = pd.DataFrame(
+        {
+            "semana": filas["semana"].to_numpy(),
+            "semana_objetivo": (pd.to_datetime(filas["semana"]) + pd.Timedelta(days=7)).dt.date.to_numpy(),
+            "combustible": filas["combustible"].to_numpy(),
+            "prediccion": [clases[i] for i in probabilidades.argmax(axis=1)],
+            "probabilidad": probabilidades.max(axis=1),
+        }
+    )
+    for clase in ["sube", "baja", "se_mantiene"]:
+        resultado[f"prob_{clase}"] = probabilidades[:, clases.index(clase)] if clase in clases else 0.0
+    resultado["version_modelo"] = str(version_modelo)
+    return resultado.sort_values("combustible").reset_index(drop=True)
+
+
+def fila_de_metricas(resultado: dict, version_modelo: str) -> pd.DataFrame:
+    """Convierte el resultado de `evaluar` en una fila de `gold.metricas_modelo`, sin la fecha de entrenamiento."""
+    fila = {
+        "version_modelo": str(version_modelo),
+        "inicio_prueba": pd.Timestamp(resultado["inicio_prueba"]).date(),
+        "filas_entrenamiento": int(resultado["filas_entrenamiento"]),
+        "filas_prueba": int(resultado["filas_prueba"]),
+    }
+    metricas_nombres = ["balanced_accuracy", "f1_macro", "direccion_con_movimiento"]
+    for metrica in metricas_nombres:
+        fila[f"modelo_{metrica}"] = float(resultado[f"modelo_{metrica}"])
+    for metrica in metricas_nombres:
+        fila[f"linea_base_{metrica}"] = float(resultado[f"regla_{metrica}"])
+    fila["supera_linea_base"] = fila["modelo_balanced_accuracy"] > fila["linea_base_balanced_accuracy"]
+    return pd.DataFrame([fila])

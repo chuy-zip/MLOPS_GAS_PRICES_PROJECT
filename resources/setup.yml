@@ -1,11 +1,12 @@
 resources:
   jobs:
     gas_price_setup:
-      name: gas_price_setup
+      name: equipo-01-setup
       description: Crea las tablas que falten según databricks/sql/tablas.sql. Lo corre el CI después de cada despliegue.
       max_concurrent_runs: 1
       tags:
         proyecto: gas_price
+        equipo: equipo-01
       parameters:
         - name: catalogo
           default: ${var.catalogo}

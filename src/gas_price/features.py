@@ -16,7 +16,7 @@ import pandas as pd
 
 from gas_price import eia, mem
 
-UMBRAL_CAMBIO = 0.10  # quetzales por galón. Un cambio menor cuenta como "igual"
+UMBRAL_CAMBIO = 0.10  # quetzales por galón. Un cambio menor cuenta como "se_mantiene"
 DIA_DE_CAMBIO = "W-MON"  # semanas que terminan en lunes, el día en que cambia casi siempre el precio
 MARGEN_NORMAL = 1.00  # diferencia normal entre estaciones, según el análisis de negocio
 
@@ -46,9 +46,9 @@ VARIABLES = ["combustible", *VARIABLES_NUMERICAS]
 
 
 def etiquetar(cambio: pd.Series) -> pd.Series:
-    """Convierte un cambio de precio en "sube", "baja" o "igual". Un cambio desconocido queda nulo."""
+    """Convierte un cambio de precio en "sube", "baja" o "se_mantiene". Un cambio desconocido queda nulo."""
     etiqueta = pd.Series(
-        np.select([cambio >= UMBRAL_CAMBIO, cambio <= -UMBRAL_CAMBIO], ["sube", "baja"], "igual"),
+        np.select([cambio >= UMBRAL_CAMBIO, cambio <= -UMBRAL_CAMBIO], ["sube", "baja"], "se_mantiene"),
         index=cambio.index,
         dtype=object,
     )

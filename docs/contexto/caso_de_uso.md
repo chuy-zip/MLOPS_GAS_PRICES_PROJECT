@@ -1,8 +1,14 @@
 # Caso de uso y contexto
 
-## Caso de uso
+## Enunciado oficial
 
-Monitoreo del precio de la gasolina. El usuario ingresa una foto o el precio de la gasolina de hoy. El sistema, entrenado con ML, le dice si es un buen precio y si la tendencia es que suba o baje.
+El enunciado completo está en [enunciado_proyecto_final.pdf](enunciado_proyecto_final.pdf), recibido el 2026-11-13. Define los requisitos, los nombres de tablas, la rúbrica, los entregables y el calendario. Si algo de esta documentación lo contradice, manda el enunciado. El resumen de cumplimiento está en el [plan](../plan/plan_implementacion.md#cumplimiento-del-enunciado).
+
+## Caso de uso original
+
+Así lo planteó el equipo al inicio, antes del enunciado: monitoreo del precio de la gasolina. El usuario ingresa una foto o el precio de la gasolina de hoy. El sistema, entrenado con ML, le dice si es un buen precio y si la tendencia es que suba o baje.
+
+El enunciado se enfoca en la segunda parte: predecir si el precio sube o baja la semana siguiente, a partir de fotos de precios.
 
 ## Diagrama entregado por el catedrático
 

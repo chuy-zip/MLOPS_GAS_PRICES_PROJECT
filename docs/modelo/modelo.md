@@ -48,7 +48,7 @@ Antes de entrenar hay que confirmar con los datos qué día de la semana se toma
 ## Cómo se evalúa
 
 1. **Partición temporal:** las últimas 104 semanas, unos dos años, se reservan para evaluar. Se entrena con las anteriores. Nunca partición aleatoria, porque filtraría información del futuro.
-2. **Métricas reportadas:** balanced accuracy, F1 macro y acierto de la dirección en las semanas con movimiento. Se registran también para la regla "repetir la semana pasada", como punto de comparación. No son un requisito que el modelo deba cumplir.
+2. **Métricas reportadas:** balanced accuracy, F1 macro y acierto de la dirección en las semanas con movimiento. Se registran también para la línea base del enunciado, "se repite la dirección de la semana anterior". El enunciado pide reportar si el modelo la supera, no exige superarla.
 3. **Modelo elegido:** regresión logística, porque fue el candidato más estable en la prueba de viabilidad.
 4. **Modelo final:** después de evaluar, se entrena con todas las semanas que tienen etiqueta y ese es el que se registra.
 
@@ -92,9 +92,20 @@ Las métricas se registran en MLflow para comparar versiones futuras.
 
 Igual que en el Ejercicio 5:
 
-1. Experimento `/Shared/gas_price_tendencia`, visible para todo el equipo.
-2. Métricas y parámetros registrados a mano, con la etiqueta `huella_datos`. Si los datos de entrenamiento no cambiaron desde la última corrida, la tarea termina sin entrenar.
+1. Experimento `/Shared/equipo-01-tendencia`, visible para todo el equipo.
+2. Métricas y parámetros registrados a mano, con las etiquetas `huella_datos` y `modelo`. Si los datos de entrenamiento no cambiaron desde la última corrida del mismo modelo, la tarea termina sin entrenar. Como la etiqueta incluye el nombre del modelo, cambiar de catálogo siempre provoca un entrenamiento nuevo.
 3. Modelo con firma y ejemplo de entrada, serializado con cloudpickle.
-4. Registro en Unity Catalog como `gas_price.gold.modelo_tendencia_precio`, con alias `champion` en la versión más reciente.
+4. Registro en Unity Catalog como `equipo_01.gold.modelo_tendencia_precio`, con alias `champion` en la versión más reciente.
 
-**Entrada del modelo:** una fila con `combustible` como texto (`super`, `regular` o `diesel`) y las variables numéricas de `gold.features_semanales`. **Salida:** `sube`, `baja` o `igual`.
+**Entrada del modelo:** una fila con `combustible` como texto (`super`, `regular` o `diesel`) y las variables numéricas de `gold.features_semanales`. **Salida:** `sube`, `baja` o `se_mantiene`.
+
+## Predicciones y métricas para la API
+
+La API no carga el modelo. Lee dos tablas de oro que escribe el job:
+
+1. **`gold.predicciones`**, escrita por la tarea `50_predicciones`. Una fila por semana y combustible: la dirección predicha para el lunes siguiente, su probabilidad, la probabilidad de cada clase y la versión del modelo. Cuando llega la semana siguiente, la misma tarea completa `direccion_real` y `acierto`. Las predicciones se acumulan, así que con el tiempo muestran el acierto del modelo en semanas que no usó para entrenar.
+2. **`gold.metricas_modelo`**, escrita por `40_entrenamiento`. Una fila por versión del modelo con sus métricas, las de la línea base y si la supera.
+
+`semana` es el lunes con los datos usados y `semana_objetivo` el lunes cuyo cambio se predice. Las semanas van de martes a lunes, como los precios de referencia del MEM.
+
+La lógica está en `src/gas_price/modelo.py`, en `semana_a_predecir`, `predecir` y `fila_de_metricas`, con tests.
