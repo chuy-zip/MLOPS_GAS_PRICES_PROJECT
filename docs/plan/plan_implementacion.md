@@ -18,7 +18,7 @@ Puntos de la rúbrica y estado al 2026-11-13:
 |---|---|---|
 | Capa bronce: fotos por external location, carga incremental y auditoría | 10 | Pendiente. MEM y EIA ya están en bronce como fuentes complementarias |
 | Capa plata: extracción de precios, 3 reglas de calidad, cuarentena y exactitud medida a mano | 15 | Pendiente |
-| Capa oro: precio semanal, variación, etiqueta de dirección y comentarios | 10 | Parcial. Faltan `precio_semanal` y `variacion_semanal`, que dependen de las fotos |
+| Capa oro: precio semanal, variación, etiqueta de dirección y comentarios | 10 | Hecho con el MEM. Las filas de fotos aparecen solas cuando `silver.precios` tenga datos |
 | Modelo: validación temporal, comparación con la línea base y MLflow | 10 | Hecho. 0.55 contra 0.46 de la línea base |
 | Clusters y job: cómputo, job encadenado, programación y alertas | 10 | Hecho, salvo confirmar con el catedrático la equivalencia con serverless |
 | API en el Droplet | 20 | Pendiente. Faltan las credenciales de solo lectura para S3 |
@@ -58,6 +58,8 @@ Puntos de la rúbrica y estado al 2026-11-13:
 | 2026-11-13 | Se adopta el enunciado oficial. Las fotos son la fuente principal. El MEM y la EIA quedan como fuentes complementarias | El enunciado lo define así y permite fuentes complementarias para la historia del modelo |
 | 2026-11-13 | Nombres según la convención del enunciado: catálogo `equipo_01`, jobs `equipo-01-*`, repo `equipo-01-gasolina-gt` y prefijo `equipo-01/` en los buckets | El enunciado los pide como entregables con nombre fijo |
 | 2026-11-13 | La etiqueta "igual" pasa a llamarse `se_mantiene` | Es el nombre del enunciado |
+| 2026-11-13 | Nombres de columnas y tablas del enunciado: `_ingestion_timestamp`, `_source_file`, `precio_q_galon` decimal, `features_modelo`. Las semanas se identifican por su martes de inicio | Coincidir con el enunciado y con el ejemplo de su API |
+| 2026-11-13 | `gold.precio_semanal` combina el MEM y las fotos, con una columna `fuente`. La EIA no entra | Con 110 fotos la mayoría de semanas quedaría vacía. La EIA está en dólares y no es un precio local |
 | 2026-11-13 | La API lee oro directamente. El job guarda la predicción en `gold.predicciones` y las métricas en `gold.metricas_modelo`. La tarea 50 deja de publicar un archivo y pasa a predecir | El enunciado pide que la API lea oro. Así la API no carga el modelo |
 | 2026-11-13 | El job corre cada martes a las 8:00 y avisa por correo si falla | El enunciado pide programación o disparo por fotos, y una alerta. El MEM publica los martes |
 | 2026-11-13 | El job mantiene una tarea por fuente y por paso, en lugar de 3 tareas | Sigue el orden bronce, plata y oro. Cada tarea se prueba por separado. Se confirma con el catedrático |
@@ -88,7 +90,8 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 | 3 | `gold.predicciones` y `gold.metricas_modelo` | Ricardo | Hecho |
 | 3 | Programación semanal y alerta por correo | Ricardo | Hecho. La alerta se verá la primera vez que falle el job |
 | 3 | Migración al catálogo `equipo_01` y borrado del catálogo `gas_price` | Ricardo | Hecho |
-| 3 | `gold.precio_semanal` y `gold.variacion_semanal` desde las fotos | | Pendiente |
+| 3 | `gold.precio_semanal` y `gold.variacion_semanal` | Ricardo | Hecho con el MEM. Las fotos se suman solas |
+| 3 | Tablas de fotos del enunciado definidas en `tablas.sql`: `bronze.fotos_precios`, `silver.precios` y `silver.precios_rejected` | Ricardo | Hecho. Vacías, las llena el equipo de fotos |
 | 3 | Evidencia de al menos 2 corridas exitosas con fotos de semanas distintas | | Pendiente |
 | 4 | API con los endpoints del enunciado en el puerto del equipo | | Pendiente |
 | 4 | Pruebas de usuario final con `curl` o Postman | | Pendiente |

@@ -3,7 +3,8 @@
 # MAGIC # 50 Predicción de la semana siguiente
 # MAGIC
 # MAGIC 1. Carga el modelo `champion` desde Unity Catalog.
-# MAGIC 2. Predice la dirección del próximo cambio para cada combustible, con los datos del lunes más reciente.
+# MAGIC 2. Predice la dirección del cambio de la semana siguiente para cada combustible, con los datos de la semana más reciente.
+# MAGIC    Las semanas van de martes a lunes y se identifican por su martes de inicio.
 # MAGIC 3. Guarda la predicción en `gold.predicciones`. Si esa semana ya tenía predicción, la actualiza.
 # MAGIC 4. Completa la dirección real y el acierto de las predicciones pasadas, cuando ya se conocen.
 # MAGIC
@@ -45,7 +46,7 @@ version = MlflowClient().get_model_version_by_alias(NOMBRE_MODELO, ALIAS).versio
 campeon = mlflow.sklearn.load_model(f"models:/{NOMBRE_MODELO}@{ALIAS}")
 print(f"Modelo {NOMBRE_MODELO} versión {version}")
 
-semanales = spark.table(f"{oro}.features_semanales").toPandas()
+semanales = spark.table(f"{oro}.features_modelo").toPandas()
 filas = modelo.semana_a_predecir(semanales)
 if filas.empty:
     dbutils.notebook.exit("No hay una semana sin etiqueta para predecir")
@@ -85,12 +86,12 @@ spark.sql(f"""
 
 # COMMAND ----------
 
-# La etiqueta de una semana en features_semanales es justo la dirección real que se predijo para ella.
+# La etiqueta de una semana en features_modelo es justo la dirección real que se predijo para ella.
 spark.sql(f"""
     MERGE INTO {TABLA} AS t
     USING (
         SELECT semana, combustible, etiqueta
-        FROM {oro}.features_semanales
+        FROM {oro}.features_modelo
         WHERE etiqueta IS NOT NULL
     ) AS s
     ON t.semana = s.semana AND t.combustible = s.combustible

@@ -37,13 +37,13 @@ DESTINO = f"{catalogo}.{esquema_silver}.precios_oficiales"
 # COMMAND ----------
 
 bronce = spark.table(ORIGEN)
-ultima = bronce.orderBy(F.col("_ingestado_en").desc()).select("_hash_archivo", "_archivo_origen").first()
-print("Versión usada:", ultima["_archivo_origen"])
+ultima = bronce.orderBy(F.col("_ingestion_timestamp").desc()).select("_file_hash", "_source_file").first()
+print("Versión usada:", ultima["_source_file"])
 
-crudo = bronce.filter(F.col("_hash_archivo") == ultima["_hash_archivo"]).toPandas().sort_values("fila_excel")
+crudo = bronce.filter(F.col("_file_hash") == ultima["_file_hash"]).toPandas().sort_values("fila_excel")
 limpio = mem.limpiar(crudo)
 largo = mem.a_formato_largo(limpio)
-largo["_archivo_origen"] = ultima["_archivo_origen"]
+largo["_source_file"] = ultima["_source_file"]
 
 print(f"{len(crudo)} filas en bronce, {len(limpio)} fechas únicas, {len(largo)} filas en plata")
 fuera = mem.precios_fuera_de_rango(limpio)
@@ -53,11 +53,14 @@ if len(fuera) > 0:
 # COMMAND ----------
 
 esquema = """
-    fecha DATE, combustible STRING, precio_gtq_galon DOUBLE,
-    tipo_cambio DOUBLE, regimen_fiscal STRING, _archivo_origen STRING
+    fecha DATE, combustible STRING, precio_q_galon DOUBLE,
+    tipo_cambio DOUBLE, regimen_fiscal STRING, _source_file STRING
 """
 # La tabla la define databricks/sql/tablas.sql. insertInto con overwrite reemplaza los datos sin cambiar la definición.
-filas = spark.createDataFrame(largo, schema=esquema)
+# El precio se guarda como decimal, como pide el enunciado.
+filas = spark.createDataFrame(largo, schema=esquema).withColumn(
+    "precio_q_galon", F.col("precio_q_galon").cast("decimal(10,2)")
+)
 filas.select(*spark.table(DESTINO).columns).write.insertInto(DESTINO, overwrite=True)
 
 display(spark.table(DESTINO).groupBy("combustible").agg(F.count("*").alias("dias"), F.min("fecha"), F.max("fecha")))

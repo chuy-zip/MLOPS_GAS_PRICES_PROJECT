@@ -133,10 +133,10 @@ def a_formato_largo(limpio: pd.DataFrame) -> pd.DataFrame:
         id_vars=["fecha", "tipo_cambio"],
         value_vars=COMBUSTIBLES,
         var_name="combustible",
-        value_name="precio_gtq_galon",
-    ).dropna(subset=["precio_gtq_galon"])
+        value_name="precio_q_galon",
+    ).dropna(subset=["precio_q_galon"])
     largo["regimen_fiscal"] = largo["fecha"].map(regimen_fiscal)
-    columnas = ["fecha", "combustible", "precio_gtq_galon", "tipo_cambio", "regimen_fiscal"]
+    columnas = ["fecha", "combustible", "precio_q_galon", "tipo_cambio", "regimen_fiscal"]
     return largo[columnas].sort_values(["fecha", "combustible"]).reset_index(drop=True)
 
 

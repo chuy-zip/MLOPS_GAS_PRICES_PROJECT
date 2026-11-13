@@ -28,7 +28,7 @@ def main() -> None:
     precios_internacionales = pd.concat(partes, ignore_index=True)
 
     diarios = features.precios_diarios(precios_oficiales)
-    semanales = features.features_semanales(diarios, precios_internacionales)
+    semanales = features.features_modelo(diarios, precios_internacionales)
     _, resultado = modelo.evaluar(semanales)
 
     print(f"Semanas con variables: {semanales['semana'].nunique()}, desde {semanales['semana'].min()}")
