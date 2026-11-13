@@ -22,6 +22,22 @@ Tomados de la [documentación oficial de límites de Free Edition](https://docs.
 
 La página no menciona si funcionan los file arrival triggers. Se prueba en la fase 1.
 
+## Lecciones aprendidas
+
+| Situación | Causa | Qué hacer |
+|---|---|---|
+| Las imágenes mostradas con `displayHTML` se ven con colores invertidos: lo negro sale claro, lo blanco gris y el rojo rosado | En modo oscuro, Databricks invierte los tonos claros y oscuros de las salidas de `displayHTML`. Fuente: [HTML outputs in dark mode](https://docs.databricks.com/aws/en/notebooks/notebook-ui) | Agregar la clase `nodarkmode` a los elementos que muestran imágenes. Para revisar una sola salida, usar el ícono de sol de esa salida |
+| Las fotos de iPhone se ven un poco apagadas al mostrarlas | Vienen en el perfil de color Display P3 y el navegador asume sRGB | Convertir a sRGB antes de mostrarlas. No afecta el EXIF ni la lectura del precio |
+| Una corrida vieja de un job ya no aparece | Databricks guarda el historial de corridas por 60 días. Fuente: [monitorear jobs](https://docs.databricks.com/aws/en/jobs/monitor) | Si hace falta conservar un resultado, abrir la corrida, elegir la tarea y exportarla a HTML. Los hallazgos se resumen en `docs/` |
+
+**Código contra resultados:**
+
+1. Hacer commit desde una carpeta Git guarda el código del notebook, no sus resultados. Los notebooks están en formato fuente (`.py`), que no incluye salidas.
+2. El bundle despliega en `/Workspace/Shared/.bundle/gas_price/prod`. Nunca modifica las carpetas Git personales.
+3. Las exportaciones de corridas no se suben al repo. Incluyen rutas de los buckets y coordenadas GPS exactas de las fotos, y el repo es público.
+4. Los notebooks se mantienen en formato `.py`. Databricks permite guardar las salidas de notebooks `.ipynb` en Git, pero un administrador tiene que habilitarlo y las salidas expondrían esos mismos datos. Además, las imágenes incrustadas harían los cambios difíciles de revisar. Fuente: [formato de notebooks](https://docs.databricks.com/aws/en/notebooks/notebook-format).
+5. Hacer pull en una carpeta Git borra las salidas de los notebooks que cambian. Si una corrida interactiva importa, exportarla antes del pull.
+
 ## Conceptos de almacenamiento en Unity Catalog
 
 | Concepto | Qué es | Ejemplo en el proyecto |

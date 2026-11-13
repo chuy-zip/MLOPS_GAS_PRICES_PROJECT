@@ -57,7 +57,7 @@ flowchart LR
 | 10_ingesta_imagenes | Fotos en raw | `bronze.imagenes` |
 | 11_ingesta_mem | Excel en el repo público | Copia del Excel en bronce y `bronze.mem_precios` |
 | 20_silver_mem | `bronze.mem_precios` | `silver.precios_oficiales` |
-| 21_silver_imagenes | `bronze.imagenes` y `bronze.correcciones_manuales` | Tablas de plata de imágenes |
+| 21_silver_imagenes | `bronze.imagenes` | `silver.imagenes_metadata` |
 | 30_gold | Plata | `gold.precios_diarios`, `gold.features_semanales` y `gold.referencia_actual` |
 | 40_entrenamiento | `gold.features_semanales` | Modelo en MLflow |
 | 50_publicar_referencia | `gold.referencia_actual` | Archivo de referencia para la API |
@@ -73,24 +73,17 @@ Nunca corren más de 2 tareas en paralelo, dentro del límite de 5 de Free Editi
 
 **Disparadores:** sin calendario. El job se corre a mano, desde GitHub Actions cuando cambia el Excel, o con un file arrival trigger cuando llegan fotos nuevas a raw. Raw tiene los file events activados. Falta confirmar que Free Edition permita este tipo de disparador.
 
-## OCR en Databricks
+## Fotos
 
-El cómputo serverless no permite instalar Tesseract, que es lo que usaba la Actividad 2. Opciones a evaluar en la fase 3:
+Por ahora se extraen los metadatos del EXIF: fecha y hora con zona horaria, ubicación, precisión del GPS, dispositivo y orientación. Se leen en serverless con Pillow y pillow-heif, sin programas externos.
 
-| Opción | Ventaja | Desventaja |
-|---|---|---|
-| EasyOCR con pip | Corre en serverless | Es pesado y puede gastar mucha cuota |
-| Modelo de visión servido por Databricks | No hay que instalar nada | Hay que confirmar disponibilidad y límites en Free Edition |
-| OCR fuera de Databricks | Se reutiliza el código de la Actividad 2 tal cual | El procesamiento sale de la plataforma |
-
-El EXIF sí se puede leer en serverless con Pillow y pillow-heif, sin programas externos.
+Qué más se saca de las imágenes es un tema abierto. Ver [fuentes_de_datos.md](../datos/fuentes_de_datos.md). Si se usa OCR, el cómputo serverless no permite instalar Tesseract, que es lo que usaba la Actividad 2. Las imágenes nunca salen de Databricks: al Droplet solo llegan el modelo y datos estructurados.
 
 ## Servicio en el Droplet
 
-1. **API:** FastAPI, basada en [Actividades/Actividad5/services/serving](https://github.com/SergioAle210/ML-Engineering/tree/main/Actividades/Actividad5/services/serving) del repo del curso. Endpoint `/evaluar-precio` y, en la fase 7, `/evaluar-foto`.
+1. **API:** FastAPI, basada en [Actividades/Actividad5/services/serving](https://github.com/SergioAle210/ML-Engineering/tree/main/Actividades/Actividad5/services/serving) del repo del curso. Endpoint `/evaluar-precio`. Si da tiempo, `/evaluar-foto`.
 2. **Frontend:** una página simple servida por la misma API.
 3. **Modelo y referencia:** se incluyen en la imagen de Docker durante el CI. El Droplet no consulta Databricks en cada request.
-4. **Foto como entrada:** en el Droplet sí se puede instalar Tesseract dentro de Docker y reutilizar el código de la Actividad 2.
 
 ## Estructura de carpetas
 
@@ -102,8 +95,7 @@ MLOPS_GAS_PRICES_PROJECT/
 ├── .github/workflows/      plan y despliegue del bundle
 ├── docs/
 ├── data/
-│   ├── mem/
-│   └── correcciones/
+│   └── mem/
 ├── infra/sql/              script de catálogo y esquemas
 ├── src/gas_price/
 ├── tests/

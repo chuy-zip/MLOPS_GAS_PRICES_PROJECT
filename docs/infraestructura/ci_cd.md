@@ -54,6 +54,15 @@ La app de Databricks en GitHub ya está instalada en el repo. Eso lo hace una so
 4. Abrir el pull request en GitHub y revisar el plan que publica el CI.
 5. Después del merge, correr el job del pipeline para que las tablas queden como las deja el código de `main`.
 
+**Dónde se edita cada cosa:**
+
+| Qué | Dónde | Por qué |
+|---|---|---|
+| Notebooks | Carpeta Git en Databricks, con commit y push desde ahí | Ahí se corren contra los datos reales |
+| Documentación, `databricks.yml`, workflows, paquete de Python y tests | En la computadora, con git | No necesitan los datos para probarse |
+
+Un mismo archivo no se edita en los dos lugares a la vez. Antes de empezar a editar, hacer pull de la rama: en Databricks con el diálogo de Git, en la computadora con `git pull`.
+
 **No desplegar desde Databricks.** Al abrir un notebook de la carpeta Git aparece el aviso "This file is part of a bundle. Switch to associated bundle". La vista del bundle tiene un botón para desplegar. No se usa: el único destino es `prod`, y desplegar desde una rama pondría código sin revisar en el ambiente compartido.
 
 **Tablas compartidas.** No hay esquemas por persona. Las pruebas escriben sobre los esquemas de `gas_price`, por eso cada tabla tiene un solo responsable a la vez, asignado en el plan. Los notebooks escriben con `MERGE` por llave, así que repetir una prueba no duplica datos.
@@ -112,5 +121,5 @@ Se decide en la fase 6.
 **Otras notas:**
 
 1. El Droplet es pequeño. La imagen no debe incluir librerías pesadas como torch.
-2. Para la foto como entrada, Tesseract sí se puede instalar dentro de la imagen de Docker.
+2. Si da tiempo de aceptar fotos como entrada, Tesseract sí se puede instalar dentro de la imagen de Docker.
 3. Ambientes: uv para desarrollo local y Docker para el Droplet. La equivalencia con venv y conda se documenta como en el Taller 2.
