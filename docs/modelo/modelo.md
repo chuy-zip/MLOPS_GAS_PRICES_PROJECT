@@ -39,12 +39,37 @@ Antes de entrenar hay que confirmar con los datos qué día de la semana se toma
 2. **Granularidad:** una fila por semana y combustible.
 3. **Etiqueta:** dirección del cambio entre esta semana y la siguiente. Un cambio menor a Q0.10 cuenta como "se mantiene". El umbral se revisa con los datos.
 4. **Variables candidatas:** cambios de las 1 a 4 semanas anteriores, tendencia de 4 y 8 semanas, cambio del tipo de cambio, régimen fiscal y mes.
+5. **Variables del precio internacional,** de la EIA y convertidas a quetzales con el tipo de cambio:
+   1. Cambio del precio internacional en las 3 semanas anteriores.
+   2. Brecha: precio local menos internacional, comparada con su promedio de 8 semanas. Si el precio local quedó muy arriba del internacional, lo esperable es que baje.
 
 ## Cómo se evalúa
 
 1. **Partición temporal:** se entrena con el pasado y se evalúa con el futuro. Nunca partición aleatoria, porque filtraría información del futuro.
 2. **Métricas reportadas:** F1 macro y balanced accuracy, porque las clases pueden estar desbalanceadas. Se reportan para conocer el desempeño, no son un requisito que el modelo deba cumplir.
 3. **Candidatos:** regresión logística y Gradient Boosting, como en la Actividad 1.
+
+## Prueba de viabilidad (2026-11-12)
+
+Prueba local antes de construir el pipeline. Una fila por semana y combustible. Se entrenó con el pasado y se evaluó con los años siguientes. Como punto de comparación se usa la regla "repetir la semana pasada": si esta semana subió, decir que la próxima también sube.
+
+| Periodo de prueba | Repetir la semana pasada | Logística, solo MEM | Logística, MEM y EIA | Gradient Boosting, MEM y EIA |
+|---|---|---|---|---|
+| 2020 a 2021 | 0.49 | 0.43 | 0.44 | 0.43 |
+| 2022 a 2023 | 0.48 | 0.49 | 0.54 | 0.47 |
+| 2024 a 2026 | 0.45 | 0.43 | 0.52 | 0.48 |
+
+Las cifras son balanced accuracy con tres clases. Al azar daría 0.33.
+
+**Qué significa:**
+
+1. Con solo el Excel del MEM, los modelos no superan a la regla de repetir la semana pasada. Entrenar con menos años tampoco cambia el resultado.
+2. Con el precio internacional, la regresión logística supera a esa regla desde 2022. Cuando el precio sí se mueve, acierta la dirección en 77 % de los casos, contra 70 % de la regla.
+3. Las variables con más peso son la brecha contra el precio internacional y el cambio internacional de la semana anterior. Tiene sentido económico.
+4. Hay cambios que ningún dato anticipa, como la baja de Q9.10 del 5 de octubre de 2026 por la exención de impuestos.
+5. La regresión logística es el candidato más estable.
+
+Las métricas se registran en MLflow para comparar versiones futuras.
 
 ## Registro
 

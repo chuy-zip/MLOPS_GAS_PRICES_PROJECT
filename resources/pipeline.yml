@@ -24,11 +24,21 @@ resources:
           notebook_task:
             notebook_path: ../databricks/notebooks/11_ingesta_mem.py
 
+        - task_key: ingesta_eia
+          notebook_task:
+            notebook_path: ../databricks/notebooks/12_ingesta_eia.py
+
         - task_key: silver_mem
           depends_on:
             - task_key: ingesta_mem
           notebook_task:
             notebook_path: ../databricks/notebooks/20_silver_mem.py
+
+        - task_key: silver_eia
+          depends_on:
+            - task_key: ingesta_eia
+          notebook_task:
+            notebook_path: ../databricks/notebooks/22_silver_eia.py
 
         - task_key: silver_imagenes
           depends_on:
@@ -39,6 +49,7 @@ resources:
         - task_key: gold
           depends_on:
             - task_key: silver_mem
+            - task_key: silver_eia
             - task_key: silver_imagenes
           notebook_task:
             notebook_path: ../databricks/notebooks/30_gold.py

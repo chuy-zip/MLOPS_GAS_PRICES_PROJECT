@@ -6,13 +6,18 @@
 
 **Contenido (versión del 2026-11-10):**
 
-1. 4,359 días con fecha válida, del 8 de febrero de 2013 al 10 de noviembre de 2026.
+1. 4,359 filas con fecha válida, del 8 de febrero de 2013 al 10 de noviembre de 2026. El título interno de la hoja dice "precios promedio monitoreados en Ciudad Capital".
 2. Columnas útiles: fecha, tipo de cambio, Gasolina Superior, Gasolina Regular y Aceite Combustible Diésel. Todas en quetzales por galón, salvo el tipo de cambio.
-3. Sin nulos en esas columnas.
-4. 668 días faltantes dentro del rango.
-5. 3 fechas duplicadas: 25 de agosto de 2015, 1 y 2 de mayo de 2017. Las filas repetidas son copias exactas, con los mismos precios y tipo de cambio. Vienen así en la publicación del MEM.
-6. El precio de la Súper cambió en 798 días: 561 lunes, 180 martes y el resto otros días.
-7. Las filas finales son notas de fuente. Una nota explica el subsidio del 28 de abril al 5 de julio de 2026.
+3. **Un precio en 0 significa que ese día no se publicó.** Hay 547 días así, todos de 2017 a 2019, con las tres gasolinas en 0 a la vez. En esos años el MEM publicaba casi solo los lunes. Plata los trata como nulos.
+4. Frecuencia de publicación: días hábiles de 2013 a 2016, casi solo lunes de 2017 a 2019 y todos los días desde 2020.
+5. 668 días faltantes dentro del rango, además de los días en 0.
+6. Un tipo de cambio viene como texto con espacios invisibles, el del 25 de junio de 2019. El lector lo limpia.
+7. 3 fechas duplicadas: 25 de agosto de 2015, 1 y 2 de mayo de 2017. Las filas repetidas son copias exactas, con los mismos precios y tipo de cambio. Vienen así en la publicación del MEM. Plata deja una sola fila. Si alguna vez una fecha repetida trae valores distintos, el pipeline falla.
+8. Las filas finales son notas de fuente. Explican dos cambios de régimen: un subsidio del 28 de abril al 5 de julio de 2026 y la exención de impuestos desde el 1 de octubre de 2026, por el Decreto 22-2026. Plata los guarda en la columna `regimen_fiscal`.
+
+**Cambios semanales.** Tomando el precio de la Súper de cada lunes, hay 718 semanas. El cambio contra la semana anterior baja en 38 %, sube en 32 % y se mantiene en 30 %, con un umbral de Q0.10. Repetir la dirección de la semana anterior acierta en 44 % de las semanas.
+
+**Código:** el lector y las reglas están en `src/gas_price/mem.py`. Lo usan los notebooks y los tests.
 
 **Por qué es la fuente principal:** 13 años de datos diarios dan cientos de cambios semanales de precio. Eso alcanza para entrenar y validar un modelo de series de tiempo. Las fotos no.
 
@@ -36,20 +41,51 @@ flowchart LR
 
 ### Test de "no empeorar"
 
-Corre en cada pull request que cambia el Excel. Compara la versión nueva contra la que está en `main`.
+Corre en cada pull request, con el workflow `tests.yml`. Compara la versión nueva contra la que está en `main`. Está en `tests/test_no_empeorar.py`.
 
 | Regla | Falla si |
 |---|---|
 | Columnas obligatorias | Falta FECHA, Tipo de Cambio, Gasolina Superior, Gasolina Regular o Aceite Combustible Diésel |
 | Sin pérdida de fechas | Una fecha de la versión anterior ya no está |
-| Sin cambios silenciosos | Cambia el precio de una fecha que ya existía |
-| Sin nulos nuevos | Aparecen nulos donde antes había datos |
-| Sin duplicados nuevos | Aparece una fecha repetida que antes no estaba |
+| Sin cambios silenciosos | Cambia el precio o el tipo de cambio de una fecha que ya existía |
+| Sin nulos nuevos | Queda sin dato, o en 0, un valor que antes existía |
+| Sin fechas en conflicto | Una fecha aparece repetida con valores distintos |
 | Rango razonable | Un precio queda fuera de Q10 a Q80 por galón |
+
+Para correrlo en local, ver las instrucciones al inicio del archivo del test.
 
 Si un cambio de precio histórico es intencional, por ejemplo una corrección del MEM, se justifica en el pull request y se aprueba a mano.
 
-## 2. Fotos de dispensadores
+## 2. Precios internacionales de la EIA
+
+**Qué es:** precios spot diarios en dólares por galón que publica la EIA, la agencia de información energética de EE. UU. Son datos públicos. Se usan dos series de la Costa del Golfo, el mercado de referencia para los combustibles que importa Guatemala.
+
+| Archivo en `data/eia/` | Serie de la EIA | Sigue a | Desde |
+|---|---|---|---|
+| `gasolina_costa_golfo_diario.xls` | [EER_EPMRU_PF4_RGC_DPG](https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?n=PET&s=EER_EPMRU_PF4_RGC_DPG&f=D), gasolina regular convencional | Súper y regular | 1986 |
+| `diesel_costa_golfo_diario.xls` | [EER_EPD2DXL0_PF4_RGC_DPG](https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?n=PET&s=EER_EPD2DXL0_PF4_RGC_DPG&f=D), diésel de ultra bajo azufre | Diésel | 2006 |
+
+**Por qué se agregó:** el precio local sigue al internacional con una o dos semanas de atraso. Sin este dato, el modelo no supera a la regla de repetir la dirección de la semana anterior. Ver [modelo.md](../modelo/modelo.md).
+
+**Formato:** archivo `.xls` con la hoja `Data 1`, dos filas de títulos y luego fecha y precio. Solo vienen los días con mercado abierto. El lector está en `src/gas_price/eia.py`.
+
+**Cómo se actualiza:** con un script, desde la raíz del repo y con el paquete instalado:
+
+```
+git switch -c datos/actualizacion-eia
+python scripts/actualizar_eia.py
+```
+
+1. El script descarga las dos series y valida cada una con las reglas de "no empeorar" antes de reemplazar el archivo.
+2. Si una serie tiene problemas, no la toca y los muestra.
+3. Al final imprime cuántos días nuevos trae cada serie.
+4. Después se hace commit y se abre un pull request, que vuelve a pasar por el test de "no empeorar".
+
+Se prefirió un script a un workflow programado: un workflow abriría un pull request automático cada semana y necesitaría un token extra. Con el script, una persona decide cuándo actualizar, por ejemplo junto con el Excel del MEM.
+
+Databricks lee los archivos desde el repo público, porque no está confirmado que `eia.gov` esté entre los dominios permitidos de Free Edition.
+
+## 3. Fotos de dispensadores
 
 **Dónde están:** en el bucket de la external location `xloc-raw`, que es solo de lectura.
 

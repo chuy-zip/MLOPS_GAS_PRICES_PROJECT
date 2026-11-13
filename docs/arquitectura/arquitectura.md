@@ -18,7 +18,7 @@ flowchart LR
     end
 
     GH["GitHub<br/>código y Excel del MEM"] -- "despliega y dispara" --> DBX
-    GH -- "Excel por URL pública" --> JOB
+    GH -- "Excel del MEM y archivos de la EIA por URL pública" --> JOB
     RAW --> EXP
     RAW --> JOB
     JOB --> BR --> PL --> OR
@@ -46,7 +46,9 @@ Corre a mano, cuando haga falta conocer los datos. No escribe nada.
 flowchart LR
     T10["10_ingesta_imagenes"] --> T21["21_silver_imagenes"]
     T11["11_ingesta_mem"] --> T20["20_silver_mem"]
+    T12["12_ingesta_eia"] --> T22["22_silver_eia"]
     T20 --> T30["30_gold"]
+    T22 --> T30
     T21 --> T30
     T30 --> T40["40_entrenamiento"]
     T40 --> T50["50_publicar_referencia"]
@@ -56,18 +58,20 @@ flowchart LR
 |---|---|---|
 | 10_ingesta_imagenes | Fotos en raw | `bronze.imagenes` |
 | 11_ingesta_mem | Excel en el repo público | Copia del Excel en bronce y `bronze.mem_precios` |
+| 12_ingesta_eia | Archivos de la EIA en el repo público | `bronze.eia_precios` |
 | 20_silver_mem | `bronze.mem_precios` | `silver.precios_oficiales` |
+| 22_silver_eia | `bronze.eia_precios` | `silver.precios_internacionales` |
 | 21_silver_imagenes | `bronze.imagenes` | `silver.imagenes_metadata` |
 | 30_gold | Plata | `gold.precios_diarios`, `gold.features_semanales` y `gold.referencia_actual` |
 | 40_entrenamiento | `gold.features_semanales` | Modelo en MLflow |
 | 50_publicar_referencia | `gold.referencia_actual` | Archivo de referencia para la API |
 
-Nunca corren más de 2 tareas en paralelo, dentro del límite de 5 de Free Edition.
+Nunca corren más de 3 tareas en paralelo, dentro del límite de 5 de Free Edition.
 
 **Carga incremental:**
 
 1. Las fotos se leen con Auto Loader. Guarda un checkpoint en bronce y solo procesa archivos nuevos. Es la comparación entre el bucket y bronce, sin programarla a mano.
-2. El Excel solo se carga si su hash cambió.
+2. El Excel del MEM y los archivos de la EIA solo se cargan si su hash cambió.
 3. Cada capa escribe con `MERGE` por llave. Correr el job dos veces no duplica datos.
 4. El entrenamiento solo corre si `gold.features_semanales` cambió.
 
@@ -95,8 +99,10 @@ MLOPS_GAS_PRICES_PROJECT/
 ├── .github/workflows/      plan y despliegue del bundle
 ├── docs/
 ├── data/
-│   └── mem/
+│   ├── mem/
+│   └── eia/
 ├── infra/sql/              script de catálogo y esquemas
+├── scripts/                actualización de los datos de la EIA
 ├── src/gas_price/
 ├── tests/
 └── serving/
