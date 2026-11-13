@@ -73,7 +73,7 @@ Nunca corren más de 3 tareas en paralelo, dentro del límite de 5 de Free Editi
 1. Las fotos se leen con Auto Loader. Guarda un checkpoint en bronce y solo procesa archivos nuevos. Es la comparación entre el bucket y bronce, sin programarla a mano.
 2. El Excel del MEM y los archivos de la EIA solo se cargan si su hash cambió.
 3. Correr el job dos veces no duplica datos. Bronce agrega una versión solo si su huella es nueva. Las tablas de plata del MEM y la EIA se reescriben completas, porque cada archivo trae la historia entera. Las fotos, que llegan de a una, se escriben con `MERGE` por llave.
-4. El entrenamiento solo corre si `gold.features_semanales` cambió.
+4. El entrenamiento solo corre si `gold.features_semanales` cambió. Compara una huella de los datos contra la etiqueta `huella_datos` de las corridas anteriores en MLflow.
 
 **Disparadores:** sin calendario. El job se corre a mano, desde GitHub Actions cuando cambia el Excel, o con un file arrival trigger cuando llegan fotos nuevas a raw. Raw tiene los file events activados. Falta confirmar que Free Edition permita este tipo de disparador.
 
@@ -102,7 +102,7 @@ MLOPS_GAS_PRICES_PROJECT/
 │   ├── mem/
 │   └── eia/
 ├── infra/sql/              script de catálogo y esquemas
-├── scripts/                actualización de los datos de la EIA
+├── scripts/                actualización de la EIA y evaluación local del modelo
 ├── src/gas_price/
 ├── tests/
 └── serving/

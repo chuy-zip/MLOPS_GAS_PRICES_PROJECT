@@ -45,9 +45,24 @@ Antes de entrenar hay que confirmar con los datos qué día de la semana se toma
 
 ## Cómo se evalúa
 
-1. **Partición temporal:** se entrena con el pasado y se evalúa con el futuro. Nunca partición aleatoria, porque filtraría información del futuro.
-2. **Métricas reportadas:** F1 macro y balanced accuracy, porque las clases pueden estar desbalanceadas. Se reportan para conocer el desempeño, no son un requisito que el modelo deba cumplir.
-3. **Candidatos:** regresión logística y Gradient Boosting, como en la Actividad 1.
+1. **Partición temporal:** las últimas 104 semanas, unos dos años, se reservan para evaluar. Se entrena con las anteriores. Nunca partición aleatoria, porque filtraría información del futuro.
+2. **Métricas reportadas:** balanced accuracy, F1 macro y acierto de la dirección en las semanas con movimiento. Se registran también para la regla "repetir la semana pasada", como punto de comparación. No son un requisito que el modelo deba cumplir.
+3. **Modelo elegido:** regresión logística, porque fue el candidato más estable en la prueba de viabilidad.
+4. **Modelo final:** después de evaluar, se entrena con todas las semanas que tienen etiqueta y ese es el que se registra.
+
+**Código:** las variables están en `src/gas_price/features.py` y el modelo en `src/gas_price/modelo.py`. El notebook de oro, el de entrenamiento y `scripts/evaluar_modelo.py` usan ese mismo código. El script corre la evaluación en local con los archivos de `data/`:
+
+```
+python scripts/evaluar_modelo.py
+```
+
+Resultado con los datos al 2026-11-12, prueba desde el 18 de noviembre de 2024:
+
+| Métrica | Modelo | Repetir la semana pasada |
+|---|---|---|
+| Balanced accuracy | 0.55 | 0.45 |
+| F1 macro | 0.55 | 0.45 |
+| Dirección correcta cuando hay movimiento | 0.74 | 0.64 |
 
 ## Prueba de viabilidad (2026-11-12)
 
@@ -73,4 +88,11 @@ Las métricas se registran en MLflow para comparar versiones futuras.
 
 ## Registro
 
-Igual que en el Ejercicio 5: MLflow con autolog, firma del modelo, registro en Unity Catalog como `modelo_tendencia_precio` en el esquema de oro y alias `champion` para la versión que usa la API.
+Igual que en el Ejercicio 5:
+
+1. Experimento `/Shared/gas_price_tendencia`, visible para todo el equipo.
+2. Métricas y parámetros registrados a mano, con la etiqueta `huella_datos`. Si los datos de entrenamiento no cambiaron desde la última corrida, la tarea termina sin entrenar.
+3. Modelo con firma y ejemplo de entrada, serializado con cloudpickle.
+4. Registro en Unity Catalog como `gas_price.gold.modelo_tendencia_precio`, con alias `champion` en la versión más reciente.
+
+**Entrada del modelo:** una fila con `combustible` como texto (`super`, `regular` o `diesel`) y las variables numéricas de `gold.features_semanales`. **Salida:** `sube`, `baja` o `igual`.
