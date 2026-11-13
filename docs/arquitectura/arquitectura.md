@@ -71,9 +71,9 @@ flowchart LR
 | 20_silver_mem | `bronze.mem_precios` | `silver.precios_oficiales` |
 | 22_silver_eia | `bronze.eia_precios` | `silver.precios_internacionales` |
 | 21_silver_imagenes | `bronze.fotos_precios` | `silver.precios` y `silver.precios_rejected`. Pendiente |
-| 30_gold | Plata | `gold.precios_diarios`, `gold.features_semanales` y `gold.referencia_actual` |
-| 40_entrenamiento | `gold.features_semanales` | Modelo en MLflow y una fila en `gold.metricas_modelo` |
-| 50_predicciones | `gold.features_semanales` y el modelo `champion` | `gold.predicciones`: la predicción de la semana siguiente y, cuando se conoce, la dirección real |
+| 30_gold | Plata, incluida `silver.precios` de las fotos | `gold.precios_diarios`, `gold.precio_semanal`, `gold.variacion_semanal`, `gold.features_modelo` y `gold.referencia_actual` |
+| 40_entrenamiento | `gold.features_modelo` | Modelo en MLflow y una fila en `gold.metricas_modelo` |
+| 50_predicciones | `gold.features_modelo` y el modelo `champion` | `gold.predicciones`: la predicción de la semana siguiente y, cuando se conoce, la dirección real |
 
 **Relación con las 3 tareas del enunciado.** El enunciado propone un job con 3 tareas encadenadas: bronce, plata y oro. Este job sigue ese mismo orden, pero separa cada capa en una tarea por fuente: 1x es bronce, 2x es plata y 3x a 5x es oro. Así cada tarea se puede probar y volver a correr por separado, y las fuentes avanzan en paralelo.
 
@@ -84,7 +84,7 @@ Nunca corren más de 3 tareas en paralelo, dentro del límite de 5 de Free Editi
 1. Las fotos se leen con Auto Loader. Guarda un checkpoint en bronce y solo procesa archivos nuevos. Es la comparación entre el bucket y bronce, sin programarla a mano.
 2. El Excel del MEM y los archivos de la EIA solo se cargan si su hash cambió.
 3. Correr el job dos veces no duplica datos. Bronce agrega una versión solo si su huella es nueva. Las tablas de plata del MEM y la EIA se reescriben completas, porque cada archivo trae la historia entera. Las fotos, que llegan de a una, se escriben con `MERGE` por llave.
-4. El entrenamiento solo corre si `gold.features_semanales` cambió. Compara una huella de los datos contra la etiqueta `huella_datos` de las corridas anteriores en MLflow.
+4. El entrenamiento solo corre si `gold.features_modelo` cambió. Compara una huella de los datos contra la etiqueta `huella_datos` de las corridas anteriores en MLflow.
 
 **Disparadores y alertas:**
 
@@ -121,7 +121,7 @@ Lo que pide el enunciado:
 |---|---|
 | `GET /health` | Nada. Estado del servicio |
 | `GET /precios/actual` | `gold.referencia_actual` |
-| `GET /precios?combustible=&desde=&hasta=` | Precios semanales de oro |
+| `GET /precios?combustible=&desde=&hasta=` | `gold.precio_semanal`, con la columna `fuente` para elegir el precio oficial o el de las fotos |
 | `GET /prediccion?combustible=` | `gold.predicciones`, la fila más reciente del combustible |
 | `GET /modelo/metricas` | `gold.metricas_modelo`, la fila más reciente |
 

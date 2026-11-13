@@ -7,8 +7,12 @@
 # MAGIC | Tabla | Contenido |
 # MAGIC |---|---|
 # MAGIC | `gold.precios_diarios` | Un día por fila y combustible, sin huecos, con la cantidad de fotos del día |
-# MAGIC | `gold.features_semanales` | Una fila por lunes y combustible, con las variables del modelo y la etiqueta |
+# MAGIC | `gold.precio_semanal` | Precio promedio, mínimo y máximo por semana, combustible y fuente: `mem` o `fotos` |
+# MAGIC | `gold.variacion_semanal` | Variación contra la semana anterior y su dirección |
+# MAGIC | `gold.features_modelo` | Una fila por semana y combustible, con las variables del modelo y la etiqueta |
 # MAGIC | `gold.referencia_actual` | El último precio oficial por combustible y el rango de "buen precio" |
+# MAGIC
+# MAGIC Las semanas van de martes a lunes y se identifican por su martes de inicio.
 # MAGIC
 # MAGIC Las tablas se reescriben completas en cada corrida. Sus columnas y tipos están en `databricks/sql/tablas.sql`.
 
@@ -56,29 +60,25 @@ internacionales = spark.table(f"{plata}.precios_internacionales").toPandas()
 
 diarios = features.precios_diarios(oficiales)
 
-# Fotos con precio válido por día, desde silver.precios. Si la tabla todavía no existe, el día queda con 0 fotos.
-tabla_fotos = f"{plata}.precios"
-if spark.catalog.tableExists(tabla_fotos):
-    fotos = (
-        spark.table(tabla_fotos)
-        .groupBy("fecha")
-        .agg(F.countDistinct("foto_origen").alias("n_fotos"))
-        .toPandas()
-    )
-    diarios = diarios.merge(fotos, on="fecha", how="left")
-    diarios["n_fotos"] = diarios["n_fotos"].fillna(0)
-else:
-    print(f"{tabla_fotos} no existe todavía. n_fotos queda en 0")
-    diarios["n_fotos"] = 0
-diarios["n_fotos"] = diarios["n_fotos"].astype("int32")
+# Precios de las fotos, desde silver.precios. Mientras esa tabla esté vacía, todo lo de fotos queda en 0 o sin filas.
+precios_fotos = spark.table(f"{plata}.precios").select("fecha", "combustible", "precio_q_galon", "foto_origen").toPandas()
+print(f"Precios de fotos en plata: {len(precios_fotos)}")
 
-semanales = features.features_semanales(diarios, internacionales)
+fotos_por_dia = precios_fotos.groupby("fecha")["foto_origen"].nunique().rename("n_fotos").reset_index()
+diarios = diarios.merge(fotos_por_dia, on="fecha", how="left")
+diarios["n_fotos"] = diarios["n_fotos"].fillna(0).astype("int32")
+
+semanal = features.precio_semanal(diarios, precios_fotos)
+variacion = features.variacion_semanal(semanal)
+modelo_features = features.features_modelo(diarios, internacionales)
 referencia = features.referencia_actual(diarios)
 
 # COMMAND ----------
 
 escribir(diarios, "precios_diarios")
-escribir(semanales, "features_semanales")
+escribir(semanal, "precio_semanal")
+escribir(variacion, "variacion_semanal")
+escribir(modelo_features, "features_modelo")
 escribir(referencia, "referencia_actual")
 
 # COMMAND ----------
@@ -88,8 +88,12 @@ display(spark.table(f"{oro}.referencia_actual"))
 # COMMAND ----------
 
 display(
-    spark.table(f"{oro}.features_semanales")
+    spark.table(f"{oro}.features_modelo")
     .groupBy("combustible", "etiqueta")
     .count()
     .orderBy("combustible", "etiqueta")
 )
+
+# COMMAND ----------
+
+display(spark.table(f"{oro}.variacion_semanal").orderBy(F.col("semana").desc(), "combustible", "fuente").limit(12))

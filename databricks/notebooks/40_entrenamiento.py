@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # 40 Entrenamiento del modelo de tendencia
 # MAGIC
-# MAGIC 1. Lee `gold.features_semanales`. Si esos datos ya se usaron en una corrida anterior, termina sin entrenar.
+# MAGIC 1. Lee `gold.features_modelo`. Si esos datos ya se usaron en una corrida anterior, termina sin entrenar.
 # MAGIC 2. Evalúa con partición temporal: entrena con el pasado y prueba con los últimos dos años.
 # MAGIC    Registra las métricas del modelo y de la regla "repetir la semana pasada", para comparar.
 # MAGIC 3. Entrena el modelo final con todas las semanas que tienen etiqueta.
@@ -45,7 +45,7 @@ mlflow.set_experiment(experimento)
 
 # COMMAND ----------
 
-semanales = spark.table(f"{catalogo}.{esquema_gold}.features_semanales").toPandas()
+semanales = spark.table(f"{catalogo}.{esquema_gold}.features_modelo").toPandas()
 datos = modelo.con_etiqueta(semanales)
 
 # Huella de los datos de entrenamiento. Si ya hay una corrida con la misma huella para el mismo modelo,

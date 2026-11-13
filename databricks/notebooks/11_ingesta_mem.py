@@ -54,7 +54,7 @@ print("Archivo:", url)
 print("Huella:", huella)
 
 ya_cargado = spark.catalog.tableExists(TABLA) and (
-    spark.table(TABLA).filter(F.col("_hash_archivo") == huella).limit(1).count() > 0
+    spark.table(TABLA).filter(F.col("_file_hash") == huella).limit(1).count() > 0
 )
 if ya_cargado:
     dbutils.notebook.exit("Sin cambios: esta versión del Excel ya está en bronce")
@@ -69,16 +69,16 @@ with open(ruta_volumen, "wb") as archivo:
 
 crudo = mem.extraer_crudo(mem.leer_hoja(io.BytesIO(contenido)))
 crudo["fila_excel"] = crudo["fila_excel"].astype("int32")
-crudo["_archivo_origen"] = ruta_volumen
-crudo["_url_origen"] = url
-crudo["_hash_archivo"] = huella
+crudo["_source_file"] = ruta_volumen
+crudo["_source_url"] = url
+crudo["_file_hash"] = huella
 
 esquema = """
     fila_excel INT, fecha_texto STRING, tipo_cambio_texto STRING,
     super_texto STRING, regular_texto STRING, diesel_texto STRING,
-    _archivo_origen STRING, _url_origen STRING, _hash_archivo STRING
+    _source_file STRING, _source_url STRING, _file_hash STRING
 """
-filas = spark.createDataFrame(crudo, schema=esquema).withColumn("_ingestado_en", F.current_timestamp())
+filas = spark.createDataFrame(crudo, schema=esquema).withColumn("_ingestion_timestamp", F.current_timestamp())
 # La tabla la define databricks/sql/tablas.sql. insertInto respeta esa definición.
 filas.select(*spark.table(TABLA).columns).write.insertInto(TABLA)
 

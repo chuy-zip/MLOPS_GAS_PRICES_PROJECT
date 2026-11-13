@@ -36,9 +36,9 @@ DESTINO = f"{catalogo}.{esquema_silver}.precios_internacionales"
 
 bronce = spark.table(ORIGEN)
 # Versión más reciente de cada serie.
-reciente = Window.partitionBy("serie").orderBy(F.col("_ingestado_en").desc())
+reciente = Window.partitionBy("serie").orderBy(F.col("_ingestion_timestamp").desc())
 ultimas = (
-    bronce.select("serie", "_hash_archivo", "_archivo_origen", "_ingestado_en")
+    bronce.select("serie", "_file_hash", "_source_file", "_ingestion_timestamp")
     .distinct()
     .withColumn("orden", F.row_number().over(reciente))
     .filter("orden = 1")
@@ -48,20 +48,20 @@ ultimas = (
 partes = []
 for ultima in ultimas:
     crudo = bronce.filter(
-        (F.col("serie") == ultima["serie"]) & (F.col("_hash_archivo") == ultima["_hash_archivo"])
+        (F.col("serie") == ultima["serie"]) & (F.col("_file_hash") == ultima["_file_hash"])
     ).toPandas()
     limpio = eia.limpiar(crudo)
     fuera = eia.precios_fuera_de_rango(limpio)
     if len(fuera) > 0:
         raise ValueError(f"{ultima['serie']}: {len(fuera)} precios fuera de rango:\n{fuera.head()}")
     limpio.insert(1, "serie", ultima["serie"])
-    limpio["_archivo_origen"] = ultima["_archivo_origen"]
+    limpio["_source_file"] = ultima["_source_file"]
     partes.append(limpio)
     print(f"{ultima['serie']}: {len(limpio)} días, de {limpio['fecha'].min()} a {limpio['fecha'].max()}")
 
 # COMMAND ----------
 
-esquema = "fecha DATE, serie STRING, precio_usd_galon DOUBLE, _archivo_origen STRING"
+esquema = "fecha DATE, serie STRING, precio_usd_galon DOUBLE, _source_file STRING"
 # La tabla la define databricks/sql/tablas.sql. insertInto con overwrite reemplaza los datos sin cambiar la definición.
 filas = spark.createDataFrame(pd.concat(partes, ignore_index=True), schema=esquema)
 filas.select(*spark.table(DESTINO).columns).write.insertInto(DESTINO, overwrite=True)

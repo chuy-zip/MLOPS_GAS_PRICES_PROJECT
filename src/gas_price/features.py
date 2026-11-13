@@ -1,8 +1,12 @@
-"""Tablas de oro: serie diaria, variables semanales del modelo y referencia vigente.
+"""Tablas de oro: serie diaria, precio y variación semanal, variables del modelo y referencia vigente.
 
 Trabaja con DataFrames de pandas con la forma de las tablas de plata:
-1. `precios_oficiales`: fecha, combustible, precio_gtq_galon, tipo_cambio, regimen_fiscal.
+1. `precios_oficiales`: fecha, combustible, precio_q_galon, tipo_cambio, regimen_fiscal.
 2. `precios_internacionales`: fecha, serie, precio_usd_galon.
+3. `precios` de las fotos: fecha, combustible, precio_q_galon y las demás columnas de `silver.precios`.
+
+Las semanas van de martes a lunes, como los precios de referencia del MEM. Cada semana se
+identifica por su martes de inicio, igual que en el ejemplo de la API del enunciado.
 
 Lo usan el notebook de oro, el de entrenamiento y `scripts/evaluar_modelo.py`.
 """
@@ -17,7 +21,7 @@ import pandas as pd
 from gas_price import eia, mem
 
 UMBRAL_CAMBIO = 0.10  # quetzales por galón. Un cambio menor cuenta como "se_mantiene"
-DIA_DE_CAMBIO = "W-MON"  # semanas que terminan en lunes, el día en que cambia casi siempre el precio
+DIA_DE_CAMBIO = "W-MON"  # agrupa de martes a lunes. pandas etiqueta cada semana con su lunes final
 MARGEN_NORMAL = 1.00  # diferencia normal entre estaciones, según el análisis de negocio
 
 # Combustible del MEM y serie de la EIA que sigue.
@@ -56,17 +60,28 @@ def etiquetar(cambio: pd.Series) -> pd.Series:
     return etiqueta
 
 
+def inicio_de_semana(fechas) -> pd.Series:
+    """Martes en que empieza la semana de cada fecha. Un lunes pertenece a la semana del martes anterior."""
+    fechas = pd.to_datetime(pd.Series(fechas))
+    dias_desde_martes = (fechas.dt.day_of_week - 1) % 7
+    return (fechas - pd.to_timedelta(dias_desde_martes, unit="D")).dt.date
+
+
 def precios_diarios(precios_oficiales: pd.DataFrame) -> pd.DataFrame:
     """Un día por fila y combustible, sin huecos. Es `gold.precios_diarios` sin la columna de fotos.
 
     Un día sin publicación toma el último precio conocido y queda marcado con `es_imputado`.
     """
+    precios_oficiales = precios_oficiales.assign(
+        precio_q_galon=pd.to_numeric(precios_oficiales["precio_q_galon"]).astype(float),
+        tipo_cambio=pd.to_numeric(precios_oficiales["tipo_cambio"]).astype(float),
+    )
     partes = []
     for combustible, grupo in precios_oficiales.groupby("combustible"):
         serie = grupo.set_index(pd.to_datetime(grupo["fecha"])).sort_index()
         calendario = pd.date_range(serie.index.min(), serie.index.max(), freq="D")
-        completa = serie[["precio_gtq_galon", "tipo_cambio"]].reindex(calendario)
-        completa["es_imputado"] = completa["precio_gtq_galon"].isna()
+        completa = serie[["precio_q_galon", "tipo_cambio"]].reindex(calendario)
+        completa["es_imputado"] = completa["precio_q_galon"].isna()
         completa = completa.ffill()
         completa["fecha"] = completa.index.date
         completa["combustible"] = combustible
@@ -74,7 +89,7 @@ def precios_diarios(precios_oficiales: pd.DataFrame) -> pd.DataFrame:
         partes.append(completa)
 
     columnas = ["fecha", "combustible", "precio_oficial", "es_imputado", "tipo_cambio", "regimen_fiscal"]
-    diarios = pd.concat(partes, ignore_index=True).rename(columns={"precio_gtq_galon": "precio_oficial"})
+    diarios = pd.concat(partes, ignore_index=True).rename(columns={"precio_q_galon": "precio_oficial"})
     return diarios[columnas].sort_values(["fecha", "combustible"]).reset_index(drop=True)
 
 
@@ -86,11 +101,12 @@ def _internacional_antes_del_lunes(precios_internacionales: pd.DataFrame, lunes:
     return diario.rolling(7, min_periods=3).mean().shift(1).reindex(lunes)
 
 
-def features_semanales(diarios: pd.DataFrame, precios_internacionales: pd.DataFrame) -> pd.DataFrame:
-    """Una fila por lunes y combustible con las variables y la etiqueta. Es `gold.features_semanales`.
+def features_modelo(diarios: pd.DataFrame, precios_internacionales: pd.DataFrame) -> pd.DataFrame:
+    """Una fila por semana y combustible con las variables y la etiqueta. Es `gold.features_modelo`.
 
-    La fila del lunes t describe lo que se sabía ese lunes. La etiqueta es la dirección
-    del cambio entre el lunes t y el lunes siguiente. La última semana no tiene etiqueta.
+    La fila de una semana describe lo que se sabía al cerrar esa semana, el lunes. La etiqueta es
+    la dirección del cambio de precio de la semana siguiente. La semana actual no tiene etiqueta.
+    `semana` es el martes de inicio.
     """
     ancho = diarios.pivot(index="fecha", columns="combustible", values="precio_oficial")
     ancho.index = pd.to_datetime(ancho.index)
@@ -135,8 +151,57 @@ def features_semanales(diarios: pd.DataFrame, precios_internacionales: pd.DataFr
 
     tabla = pd.concat(partes)
     tabla = tabla.dropna(subset=VARIABLES_NUMERICAS)
-    tabla.insert(0, "semana", tabla.index.date)
+    tabla.insert(0, "semana", (tabla.index - pd.Timedelta(days=6)).date)
     return tabla.sort_values(["semana", "combustible"]).reset_index(drop=True)
+
+
+def precio_semanal(diarios: pd.DataFrame, precios_fotos: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Precio promedio, mínimo y máximo por semana, combustible y fuente. Es `gold.precio_semanal`.
+
+    1. Fuente `mem`: el precio oficial vigente de cada día de la semana.
+    2. Fuente `fotos`: los precios extraídos de las fotos de esa semana, si hay.
+    """
+    partes = []
+    mem_semana = diarios.assign(semana=inicio_de_semana(diarios["fecha"]).to_numpy(), fuente="mem")
+    partes.append(mem_semana.rename(columns={"precio_oficial": "precio"})[["semana", "combustible", "fuente", "precio"]])
+    if precios_fotos is not None and len(precios_fotos) > 0:
+        fotos_semana = precios_fotos.assign(
+            semana=inicio_de_semana(precios_fotos["fecha"]).to_numpy(),
+            fuente="fotos",
+            precio=pd.to_numeric(precios_fotos["precio_q_galon"]).astype(float),
+        )
+        partes.append(fotos_semana[["semana", "combustible", "fuente", "precio"]])
+
+    todos = pd.concat(partes, ignore_index=True)
+    agrupado = (
+        todos.groupby(["semana", "combustible", "fuente"])["precio"]
+        .agg(precio_promedio="mean", precio_minimo="min", precio_maximo="max", n_observaciones="count")
+        .reset_index()
+    )
+    agrupado["n_observaciones"] = agrupado["n_observaciones"].astype("int32")
+    return agrupado.sort_values(["semana", "combustible", "fuente"]).reset_index(drop=True)
+
+
+def variacion_semanal(semanal: pd.DataFrame) -> pd.DataFrame:
+    """Variación del precio promedio contra la semana anterior. Es `gold.variacion_semanal`.
+
+    Solo compara semanas consecutivas de la misma fuente y combustible. Si la semana anterior
+    no tiene datos, como pasa a menudo con las fotos, la variación queda nula.
+    """
+    partes = []
+    for (_, _), grupo in semanal.groupby(["combustible", "fuente"]):
+        grupo = grupo.sort_values("semana").copy()
+        anterior = grupo["precio_promedio"].shift(1)
+        semana_anterior = pd.to_datetime(grupo["semana"]).shift(1)
+        consecutiva = (pd.to_datetime(grupo["semana"]) - semana_anterior) == pd.Timedelta(days=7)
+        grupo["precio_anterior"] = anterior.where(consecutiva)
+        grupo["variacion_q"] = grupo["precio_promedio"] - grupo["precio_anterior"]
+        grupo["variacion_pct"] = grupo["variacion_q"] / grupo["precio_anterior"] * 100
+        grupo["direccion"] = etiquetar(grupo["variacion_q"])
+        partes.append(grupo)
+
+    columnas = ["semana", "combustible", "fuente", "precio_promedio", "precio_anterior", "variacion_q", "variacion_pct", "direccion"]
+    return pd.concat(partes)[columnas].sort_values(["semana", "combustible", "fuente"]).reset_index(drop=True)
 
 
 def referencia_actual(diarios: pd.DataFrame) -> pd.DataFrame:

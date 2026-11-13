@@ -33,11 +33,11 @@ La API también devuelve cuántos días faltan para el próximo cambio. Así el 
 
 Antes de entrenar hay que confirmar con los datos qué día de la semana se toma como cambio. Si hay semanas con dos cambios o sin cambio, la semana se cuenta igual: la etiqueta compara el precio al inicio de la semana siguiente contra el precio de hoy.
 
-**Semanas incompletas.** Solo se usan semanas completas. Si el último dato del Excel no es lunes, esos días no forman una semana nueva. El lunes más reciente queda sin etiqueta, porque es el que el modelo tiene que predecir.
+**Semanas.** Van de martes a lunes, como los precios de referencia del MEM, y se identifican por su martes de inicio, como en el ejemplo de la API del enunciado. Las variables de una semana usan los datos de su cierre, el lunes. Solo se usan semanas completas: si el último dato del Excel no es lunes, esos días no forman una semana nueva. La semana completa más reciente queda sin etiqueta, porque su semana siguiente es la que el modelo tiene que predecir.
 
 ## Datos de entrenamiento
 
-1. **Fuente:** `gold.features_semanales`, construida a partir del Excel del MEM.
+1. **Fuente:** `gold.features_modelo`, construida a partir del Excel del MEM.
 2. **Granularidad:** una fila por semana y combustible.
 3. **Etiqueta:** dirección del cambio entre esta semana y la siguiente. Un cambio menor a Q0.10 cuenta como "se mantiene". El umbral se revisa con los datos.
 4. **Variables candidatas:** cambios de las 1 a 4 semanas anteriores, tendencia de 4 y 8 semanas, cambio del tipo de cambio, régimen fiscal y mes.
@@ -97,15 +97,15 @@ Igual que en el Ejercicio 5:
 3. Modelo con firma y ejemplo de entrada, serializado con cloudpickle.
 4. Registro en Unity Catalog como `equipo_01.gold.modelo_tendencia_precio`, con alias `champion` en la versión más reciente.
 
-**Entrada del modelo:** una fila con `combustible` como texto (`super`, `regular` o `diesel`) y las variables numéricas de `gold.features_semanales`. **Salida:** `sube`, `baja` o `se_mantiene`.
+**Entrada del modelo:** una fila con `combustible` como texto (`super`, `regular` o `diesel`) y las variables numéricas de `gold.features_modelo`. **Salida:** `sube`, `baja` o `se_mantiene`.
 
 ## Predicciones y métricas para la API
 
 La API no carga el modelo. Lee dos tablas de oro que escribe el job:
 
-1. **`gold.predicciones`**, escrita por la tarea `50_predicciones`. Una fila por semana y combustible: la dirección predicha para el lunes siguiente, su probabilidad, la probabilidad de cada clase y la versión del modelo. Cuando llega la semana siguiente, la misma tarea completa `direccion_real` y `acierto`. Las predicciones se acumulan, así que con el tiempo muestran el acierto del modelo en semanas que no usó para entrenar.
+1. **`gold.predicciones`**, escrita por la tarea `50_predicciones`. Una fila por semana y combustible: la dirección predicha para la semana siguiente, su probabilidad, la probabilidad de cada clase y la versión del modelo. Cuando llega la semana siguiente, la misma tarea completa `direccion_real` y `acierto`. Las predicciones se acumulan, así que con el tiempo muestran el acierto del modelo en semanas que no usó para entrenar.
 2. **`gold.metricas_modelo`**, escrita por `40_entrenamiento`. Una fila por versión del modelo con sus métricas, las de la línea base y si la supera.
 
-`semana` es el lunes con los datos usados y `semana_objetivo` el lunes cuyo cambio se predice. Las semanas van de martes a lunes, como los precios de referencia del MEM.
+`semana` es el martes de inicio de la semana con los datos usados, y `semana_objetivo` el de la semana cuyo cambio se predice. Por ejemplo, con datos hasta el lunes 9 de noviembre de 2026, `semana` es el martes 3 y `semana_objetivo` el martes 10.
 
 La lógica está en `src/gas_price/modelo.py`, en `semana_a_predecir`, `predecir` y `fila_de_metricas`, con tests.

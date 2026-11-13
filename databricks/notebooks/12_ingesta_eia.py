@@ -42,7 +42,7 @@ from gas_price import eia
 TABLA = f"{catalogo}.{esquema_bronze}.eia_precios"
 ESQUEMA = """
     serie STRING, fecha_texto STRING, precio_texto STRING,
-    _archivo_origen STRING, _url_origen STRING, _hash_archivo STRING
+    _source_file STRING, _source_url STRING, _file_hash STRING
 """
 
 # COMMAND ----------
@@ -55,7 +55,7 @@ for serie, config in eia.SERIES.items():
     huella = hashlib.sha256(contenido).hexdigest()
 
     ya_cargado = spark.catalog.tableExists(TABLA) and (
-        spark.table(TABLA).filter((F.col("serie") == serie) & (F.col("_hash_archivo") == huella)).limit(1).count() > 0
+        spark.table(TABLA).filter((F.col("serie") == serie) & (F.col("_file_hash") == huella)).limit(1).count() > 0
     )
     if ya_cargado:
         resumen.append(f"{serie}: sin cambios")
@@ -68,11 +68,11 @@ for serie, config in eia.SERIES.items():
 
     crudo = eia.extraer_crudo(io.BytesIO(contenido))
     crudo.insert(0, "serie", serie)
-    crudo["_archivo_origen"] = ruta_volumen
-    crudo["_url_origen"] = url
-    crudo["_hash_archivo"] = huella
+    crudo["_source_file"] = ruta_volumen
+    crudo["_source_url"] = url
+    crudo["_file_hash"] = huella
 
-    filas = spark.createDataFrame(crudo, schema=ESQUEMA).withColumn("_ingestado_en", F.current_timestamp())
+    filas = spark.createDataFrame(crudo, schema=ESQUEMA).withColumn("_ingestion_timestamp", F.current_timestamp())
     # La tabla la define databricks/sql/tablas.sql. insertInto respeta esa definición.
     filas.select(*spark.table(TABLA).columns).write.insertInto(TABLA)
     resumen.append(f"{serie}: {len(crudo)} filas")

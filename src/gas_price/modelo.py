@@ -78,7 +78,7 @@ def evaluar(features: pd.DataFrame, semanas_de_prueba: int = SEMANAS_DE_PRUEBA) 
 
 
 def semana_a_predecir(features: pd.DataFrame) -> pd.DataFrame:
-    """Las filas del lunes más reciente: todavía no tienen etiqueta, porque el lunes siguiente no llega."""
+    """Las filas de la semana más reciente: todavía no tienen etiqueta, porque la semana siguiente no termina."""
     ultima = features["semana"].max()
     return features[(features["semana"] == ultima) & features["etiqueta"].isna()]
 
@@ -86,8 +86,8 @@ def semana_a_predecir(features: pd.DataFrame) -> pd.DataFrame:
 def predecir(modelo, filas: pd.DataFrame, version_modelo: str) -> pd.DataFrame:
     """Una fila por combustible con la predicción, su probabilidad y la de cada clase.
 
-    Es la base de `gold.predicciones`. `semana` es el lunes con los datos usados y
-    `semana_objetivo` el lunes cuyo cambio de precio se predice.
+    Es la base de `gold.predicciones`. `semana` es el martes de inicio de la semana con los datos
+    usados, y `semana_objetivo` el martes de inicio de la semana cuyo cambio se predice.
     """
     probabilidades = modelo.predict_proba(filas[VARIABLES])
     clases = list(modelo.classes_)
