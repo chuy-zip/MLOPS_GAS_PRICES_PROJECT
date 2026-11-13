@@ -80,7 +80,7 @@ Un mismo archivo no se edita en los dos lugares a la vez. Antes de empezar a edi
 | `bundle-plan.yml` | Pull request a `main` | `bundle validate` y `bundle plan -t prod`. Publica el plan como comentario desplegable y lo actualiza en cada push. Ya existe |
 | `bundle-deploy.yml` | Merge a `main`, o a mano | `bundle validate`, `bundle deploy -t prod` y `bundle run gas_price_setup`, que crea las tablas que falten. Ya existe |
 | `tests.yml` | Pull request a `main` | Tests del paquete `gas_price` y test de "no empeorar" los archivos de `data/` contra la versión de `main`. Ya existe |
-| `run-pipeline.yml` | Merge a `main` que cambia algo en `data/` | Dispara el job del pipeline para cargar los datos nuevos. Fase 2 |
+| `run-pipeline.yml` | Merge a `main` que cambia algo en `data/` | Dispara el job del pipeline para cargar los datos nuevos. Propuesto, todavía no existe. Hoy el pipeline se corre a mano |
 | `build-api.yml` | Merge a `main` que toca `serving/` | Construye la imagen de la API y la publica. Fase 6 |
 
 GitHub Actions no transforma datos. Solo valida, despliega y dispara jobs. El procesamiento ocurre en Databricks.

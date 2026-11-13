@@ -1,10 +1,11 @@
 -- Definición de las tablas del pipeline. Es la fuente de verdad de sus columnas y tipos.
 --
--- La corre la tarea 05_crear_tablas al inicio del job. Los marcadores ${catalogo},
--- ${esquema_bronze}, ${esquema_silver} y ${esquema_gold} se reemplazan con los parámetros del job.
+-- La corre el job gas_price_setup, con el notebook 05_crear_tablas. El CI lo lanza después de
+-- cada despliegue. Los marcadores ${catalogo}, ${esquema_bronze}, ${esquema_silver} y
+-- ${esquema_gold} se reemplazan con los parámetros del job.
 --
--- CREATE TABLE IF NOT EXISTS no modifica una tabla que ya existe. Para cambiar el tipo de una
--- columna, hay que borrar la tabla y volver a correr el job, que la recrea y la llena.
+-- CREATE TABLE IF NOT EXISTS no modifica una tabla que ya existe. Para cambiar una tabla
+-- existente, seguir la guía "Cómo cambiar una tabla" en docs/datos/esquemas_medallion.md.
 --
 -- Las sentencias se separan con punto y coma. No usar punto y coma dentro de los comentarios.
 
