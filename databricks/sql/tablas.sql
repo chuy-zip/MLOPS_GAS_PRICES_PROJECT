@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.precios_diarios (
   es_imputado BOOLEAN COMMENT 'True si el día no venía en el Excel y tomó el último precio conocido',
   tipo_cambio DOUBLE COMMENT 'Quetzales por dólar según el Banco de Guatemala',
   regimen_fiscal STRING COMMENT 'normal, subsidio o exento, según las notas del Excel del MEM',
-  n_fotos INT COMMENT 'Fotos tomadas ese día. 0 si la tabla de fotos no existe'
+  n_fotos INT COMMENT 'Fotos con precio válido ese día, según silver.precios. 0 si esa tabla no existe'
 )
 COMMENT 'Calendario completo por combustible, sin huecos. Base de las variables semanales';
 

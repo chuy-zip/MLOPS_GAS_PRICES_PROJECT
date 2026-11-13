@@ -1,10 +1,13 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 10 Ingesta de imágenes a bronce
+# MAGIC # 10 Ingesta de fotos a bronce
 # MAGIC
-# MAGIC Lee las fotos de raw con Auto Loader y las guarda en `bronze.imagenes`.
+# MAGIC Lee las fotos por la external location con `binaryFile` o Auto Loader y escribe `bronze.fotos_precios`,
+# MAGIC con el contenido, `path`, `modificationTime`, `length`, `_ingestion_timestamp` y `_source_file`.
+# MAGIC Carga incremental: una segunda corrida no duplica fotos.
 # MAGIC
-# MAGIC Pendiente de implementar en la fase 2. Ver `docs/arquitectura/arquitectura.md`.
+# MAGIC Pendiente de implementar. Lo que pide el enunciado está en `docs/datos/fuentes_de_datos.md`,
+# MAGIC sección "Qué pide el enunciado para las fotos".
 
 # COMMAND ----------
 

@@ -132,7 +132,7 @@ Cada versión nueva del Excel se agrega a la tabla, sin borrar las anteriores. P
 
 ## Plata
 
-**`silver.imagenes_metadata`**: una fila por foto.
+**`silver.imagenes_metadata`**, opcional: una fila por foto con los metadatos del EXIF. El enunciado no la pide, pero puede servir para sacar la fecha y el lugar de cada foto antes de llenar `silver.precios`.
 
 | Columna | Tipo | Nota |
 |---|---|---|
@@ -149,7 +149,7 @@ Cada versión nueva del Excel se agrega a la tabla, sin borrar las anteriores. P
 
 No se usa la hora del GPS como fecha: `GPSTimeStamp` solo está en el 83 % de las fotos.
 
-Si se decide sacar más datos de las imágenes, sus tablas se agregan aquí. Ver el tema abierto en [fuentes_de_datos.md](fuentes_de_datos.md).
+**Conexión con oro.** `gold.precios_diarios` cuenta en `n_fotos` las fotos con precio válido de cada día, desde `silver.precios`. Si esa tabla todavía no existe, `n_fotos` queda en 0.
 
 **`silver.precios_oficiales`**: formato largo, una fila por fecha y combustible. Columnas: fecha, combustible, precio_gtq_galon, tipo_cambio, regimen_fiscal y _archivo_origen.
 

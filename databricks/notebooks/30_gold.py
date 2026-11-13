@@ -56,10 +56,15 @@ internacionales = spark.table(f"{plata}.precios_internacionales").toPandas()
 
 diarios = features.precios_diarios(oficiales)
 
-# Las fotos son opcionales: si su tabla de plata todavía no existe, el día queda con 0 fotos.
-tabla_fotos = f"{plata}.imagenes_metadata"
+# Fotos con precio válido por día, desde silver.precios. Si la tabla todavía no existe, el día queda con 0 fotos.
+tabla_fotos = f"{plata}.precios"
 if spark.catalog.tableExists(tabla_fotos):
-    fotos = spark.table(tabla_fotos).groupBy("fecha").agg(F.count("*").alias("n_fotos")).toPandas()
+    fotos = (
+        spark.table(tabla_fotos)
+        .groupBy("fecha")
+        .agg(F.countDistinct("foto_origen").alias("n_fotos"))
+        .toPandas()
+    )
     diarios = diarios.merge(fotos, on="fecha", how="left")
     diarios["n_fotos"] = diarios["n_fotos"].fillna(0)
 else:

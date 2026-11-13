@@ -30,7 +30,7 @@ Puntos de la rúbrica y estado al 2026-11-13:
 
 | Fecha | Decisión | Motivo |
 |---|---|---|
-| 2026-11-11 | El Excel del MEM es la fuente principal de entrenamiento | Tiene datos diarios desde 2013. Las fotos no alcanzan para entrenar. Ver [fuentes_de_datos.md](../datos/fuentes_de_datos.md) |
+| 2026-11-11 | El Excel del MEM es la fuente principal de entrenamiento. Reemplazada el 2026-11-13: ahora es complementaria | Tiene datos diarios desde 2013. Las fotos no alcanzan para entrenar. Ver [fuentes_de_datos.md](../datos/fuentes_de_datos.md) |
 | 2026-11-11 | El Excel se versiona en el repo, en `data/mem/` | La descarga automática desde la web del MEM no funcionó de forma confiable |
 | 2026-11-11 | Raw es solo de lectura. Nuestros archivos aterrizan en bronce | La external location de raw tiene activado "Limit to read-only use" |
 | 2026-11-11 | GitHub Actions solo valida y dispara. El procesamiento ocurre en Databricks | Procesar datos fuera de la plataforma rompe la trazabilidad y el linaje |
@@ -85,8 +85,9 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 | 2 | `silver.precios_rejected` con el motivo de cada rechazo | | Pendiente |
 | 2 | Revisión manual de al menos 20 fotos y porcentaje de acierto | | Pendiente |
 | 3 | MEM y EIA de bronce a oro, modelo, MLflow y job de punta a punta | Ricardo | Hecho |
-| 3 | `gold.predicciones` y `gold.metricas_modelo` | Ricardo | Hecho, falta probar en Databricks |
-| 3 | Programación semanal y alerta por correo | Ricardo | Hecho, falta probar en Databricks |
+| 3 | `gold.predicciones` y `gold.metricas_modelo` | Ricardo | Hecho |
+| 3 | Programación semanal y alerta por correo | Ricardo | Hecho. La alerta se verá la primera vez que falle el job |
+| 3 | Migración al catálogo `equipo_01` y borrado del catálogo `gas_price` | Ricardo | Hecho |
 | 3 | `gold.precio_semanal` y `gold.variacion_semanal` desde las fotos | | Pendiente |
 | 3 | Evidencia de al menos 2 corridas exitosas con fotos de semanas distintas | | Pendiente |
 | 4 | API con los endpoints del enunciado en el puerto del equipo | | Pendiente |
@@ -118,3 +119,4 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 | 2026-11-12 | Se confirmó que las fotos del bucket son las originales. Los colores raros venían del modo oscuro de Databricks, que invierte las salidas de `displayHTML`. Se documentó en las lecciones aprendidas |
 | 2026-11-12 | El job completo corre en unos 2 minutos. Modelo registrado con balanced accuracy de 0.55 contra 0.46 de la línea base. Tablas definidas en un DDL versionado |
 | 2026-11-13 | Se recibió el enunciado oficial. Se alinearon nombres, etiqueta, predicciones, métricas, programación, alertas y documentación |
+| 2026-11-13 | El repo pasó a llamarse `equipo-01-gasolina-gt`. El job corrió completo en `equipo_01`: 0.551 contra 0.458 de la línea base. Se borró el catálogo `gas_price` |

@@ -65,12 +65,12 @@ flowchart LR
 
 | Tarea | Lee | Escribe |
 |---|---|---|
-| 10_ingesta_imagenes | Fotos en raw | `bronze.imagenes` |
+| 10_ingesta_imagenes | Fotos en el bucket, por external location | `bronze.fotos_precios`. Pendiente |
 | 11_ingesta_mem | Excel en el repo público | Copia del Excel en bronce y `bronze.mem_precios` |
 | 12_ingesta_eia | Archivos de la EIA en el repo público | `bronze.eia_precios` |
 | 20_silver_mem | `bronze.mem_precios` | `silver.precios_oficiales` |
 | 22_silver_eia | `bronze.eia_precios` | `silver.precios_internacionales` |
-| 21_silver_imagenes | `bronze.imagenes` | `silver.imagenes_metadata` |
+| 21_silver_imagenes | `bronze.fotos_precios` | `silver.precios` y `silver.precios_rejected`. Pendiente |
 | 30_gold | Plata | `gold.precios_diarios`, `gold.features_semanales` y `gold.referencia_actual` |
 | 40_entrenamiento | `gold.features_semanales` | Modelo en MLflow y una fila en `gold.metricas_modelo` |
 | 50_predicciones | `gold.features_semanales` y el modelo `champion` | `gold.predicciones`: la predicción de la semana siguiente y, cuando se conoce, la dirección real |
