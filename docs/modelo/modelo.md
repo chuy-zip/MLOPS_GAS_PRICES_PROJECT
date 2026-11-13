@@ -8,7 +8,7 @@ Se responde comparando el precio del usuario contra la referencia oficial del mi
 
 No necesita un modelo de ML porque la referencia oficial ya existe y es exacta. Entrenar un modelo para estimar algo que el MEM publica sería agregar error sin ganar nada.
 
-El rango normal parte de los datos del análisis de negocio: de Q0.50 a Q1.00 por galón entre estaciones. Cuando haya suficientes fotos, ese rango se calcula con los datos reales.
+El rango normal parte del análisis de negocio: de Q0.50 a Q1.00 por galón entre estaciones. Si las fotos llegan a dar precios por estación, el rango se puede calcular con esos datos.
 
 ## "¿Va a subir o a bajar?"
 

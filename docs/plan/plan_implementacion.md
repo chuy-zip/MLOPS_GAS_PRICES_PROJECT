@@ -39,7 +39,7 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 
 | Decisión | Recomendación | Dónde se discute |
 |---|---|---|
-| Motor de OCR en Databricks | Se decide en la fase 3, después de explorar las fotos | [arquitectura.md](../arquitectura/arquitectura.md) |
+| Cómo se aprovechan las fotos más allá del EXIF | Tema abierto. Lo decide quien trabaje las fotos | [fuentes_de_datos.md](../datos/fuentes_de_datos.md) |
 
 ## Fases y tareas
 
@@ -52,7 +52,7 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 1 | Workflows de plan con comentario desplegable y de despliegue en `main` | Ricardo | Hecho |
 | 1 | Generar el token de Databricks y guardar `DATABRICKS_HOST` y `DATABRICKS_TOKEN` en GitHub | Ricardo | Hecho |
 | 1 | Primer pull request: revisar el comentario con el plan | Ricardo | Hecho |
-| 1 | Crear el ruleset de `main` con el check `plan` obligatorio | | Pendiente |
+| 1 | Crear el ruleset de `main` con el check `plan` obligatorio | Ricardo | Hecho |
 | 1 | Merge a `main`: confirmar que los dos jobs aparecen en el workspace | Ricardo | Hecho |
 | 1 | Correr el job `gas_price_exploracion` y documentar cuántas fotos hay, de qué fechas y de qué lugares | Ricardo | Hecho. Ver [fuentes_de_datos.md](../datos/fuentes_de_datos.md) |
 | 1 | Prueba de permisos: crear el catálogo `gas_price` | Ricardo | Hecho |
@@ -65,19 +65,19 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 2 | Tarea de ingesta del Excel a bronce | | Pendiente |
 | 2 | Tarea de ingesta de fotos a bronce con Auto Loader | | Pendiente |
 | 3 | Tarea del Excel a plata | | Pendiente |
-| 3 | Tarea de EXIF y OCR a plata | | Pendiente |
+| 3 | Tarea de EXIF a plata | | Pendiente |
+| 3 | Definir cómo se aprovechan las fotos más allá del EXIF | | Pendiente |
 | 4 | Tarea de plata a oro, incluyendo la definición de la semana y del próximo cambio | | Pendiente |
 | 5 | Tarea de entrenamiento y registro en MLflow | | Pendiente |
 | 5 | Tarea que publica la referencia actual para la API | | Pendiente |
 | 6 | API con FastAPI y Docker en el Droplet | | Pendiente |
 | 6 | Frontend simple con entrada de precio | | Pendiente |
-| 7 | Entrada por foto con OCR | | Pendiente |
+| 7 | Entrada por foto en la API | | Opcional |
 
 ## Riesgos
 
 1. Puede que el catedrático no otorgue `CREATE MANAGED STORAGE`. En ese caso las tablas quedan en el almacenamiento por defecto y el código no cambia.
 2. Free Edition tiene cuotas de uso y un máximo de 5 tareas de job a la vez. Con varios desarrolladores probando al mismo tiempo, el cómputo puede apagarse el resto del día.
-3. El OCR de las fotos puede no funcionar en serverless. La predicción no depende de las fotos, así que el proyecto avanza igual.
 
 ## Bitácora
 
@@ -89,3 +89,4 @@ Un usuario ingresa el precio de la gasolina de hoy (y, si da tiempo, una foto de
 | 2026-11-11 | Se adoptaron los bundles con un solo ambiente compartido y se descartó Terraform |
 | 2026-11-11 | Se creó el repo propio, se movió la documentación y se armaron el bundle y los workflows de plan y despliegue |
 | 2026-11-12 | Primer despliegue por CI: los dos jobs quedaron en el workspace. Se corrió la exploración: 110 fotos de diciembre 2022 a noviembre 2026 |
+| 2026-11-12 | Se confirmó que las fotos del bucket son las originales. Los colores raros venían del modo oscuro de Databricks, que invierte las salidas de `displayHTML`. Se documentó en las lecciones aprendidas |
