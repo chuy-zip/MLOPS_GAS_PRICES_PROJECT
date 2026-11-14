@@ -29,6 +29,9 @@ resources:
           default: ${var.esquema_gold}
         - name: repo_raw
           default: ${var.repo_raw}
+        # "true" entrena aunque los datos no hayan cambiado, por ejemplo después de recrear las tablas.
+        - name: forzar_entrenamiento
+          default: "false"
 
       tasks:
         - task_key: ingesta_imagenes

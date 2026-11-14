@@ -16,6 +16,14 @@ resources:
           default: ${var.esquema_silver}
         - name: esquema_gold
           default: ${var.esquema_gold}
+        - name: ubicacion_bronze
+          default: ${var.ubicacion_bronze}
+        - name: ubicacion_silver
+          default: ${var.ubicacion_silver}
+        - name: ubicacion_gold
+          default: ${var.ubicacion_gold}
+        - name: prefijo_equipo
+          default: ${var.prefijo_equipo}
       tasks:
         - task_key: crear_tablas
           notebook_task:

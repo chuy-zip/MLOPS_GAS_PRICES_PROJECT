@@ -23,7 +23,7 @@ flowchart LR
     O -- "copia de oro" --> API
 ```
 
-1. **Fuente principal: las fotos de precios** que comparte el catedrático. Databricks las lee desde S3 por una external location y las convierte en precios estructurados. Las tablas viven en Databricks, porque Free Edition no permite escribir en S3.
+1. **Fuente principal: las fotos de precios** que comparte el catedrático. Databricks las lee desde S3 por una external location y las convierte en precios estructurados. Cada capa vive en su bucket de S3, como tablas externas de Unity Catalog dentro del prefijo `equipo-01/`.
 2. **Fuentes complementarias,** que el enunciado permite para tener más historia: el Excel de precios del MEM, desde 2013, y el precio internacional de la gasolina y el diésel publicado por la EIA. Se versionan en `data/` y cada cambio pasa un test de "no empeorar".
 3. **El job `equipo-01-pipeline`** lleva los datos de bronce a oro, entrena el modelo, lo registra en MLflow y guarda la predicción de la semana siguiente en `gold.predicciones`. Corre cada martes y avisa por correo si falla.
 4. **La API** se construye y se prueba en local con el modelo `champion` y una copia de las tablas de oro, descargados de Databricks. Se empaqueta en Docker y se sube al Droplet a mano.

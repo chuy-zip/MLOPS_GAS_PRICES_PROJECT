@@ -2,8 +2,9 @@
 -- Lo corre un administrador una sola vez en el SQL Editor de Databricks.
 -- Se puede volver a correr sin problema: no borra ni reemplaza nada.
 --
--- Los esquemas usan el almacenamiento por defecto de Databricks. Free Edition no permite escribir
--- en los buckets de S3. Ver docs/infraestructura/databricks.md, sección "Decisión final".
+-- Los esquemas no tienen ubicación propia. Cada tabla es externa y declara su ruta en el bucket
+-- de su capa, en databricks/sql/tablas.sql. El volumen archivos se queda en Databricks.
+-- Ver docs/infraestructura/databricks.md, sección "Estado final".
 
 CREATE CATALOG IF NOT EXISTS equipo_01
   COMMENT 'Equipo 01. Proyecto final de MLOps: predicción del precio de la gasolina en Guatemala';

@@ -61,7 +61,8 @@ Puntos de la rúbrica y estado al 2026-11-13:
 | 2026-11-13 | Nombres de columnas y tablas del enunciado: `_ingestion_timestamp`, `_source_file`, `precio_q_galon` decimal, `features_modelo`. Las semanas se identifican por su martes de inicio | Coincidir con el enunciado y con el ejemplo de su API |
 | 2026-11-13 | `gold.precio_semanal` combina el MEM y las fotos, con una columna `fuente`. La EIA no entra | Con 110 fotos la mayoría de semanas quedaría vacía. La EIA está en dólares y no es un precio local |
 | 2026-11-13 | El job guarda la predicción en `gold.predicciones` y las métricas en `gold.metricas_modelo`. La tarea 50 deja de publicar un archivo y pasa a predecir | Deja la predicción y su acierto registrados en oro |
-| 2026-11-13 | **Todo vive en Databricks.** Las tablas quedan en el almacenamiento por defecto. Se cancela la migración a los buckets | Free Edition no permite escribir en un proveedor de nube externo. Acordado con el catedrático |
+| 2026-11-13 | **Todo vive en Databricks.** Las tablas quedan en el almacenamiento por defecto. Se cancela la migración a los buckets | Free Edition no permite escribir en un proveedor de nube externo. Acordado con el catedrático. Reemplazada el mismo día, ver la siguiente |
+| 2026-11-13 | **Las tablas son externas, en el bucket de su capa** y dentro del prefijo `equipo-01/`. El volumen y el modelo se quedan en Databricks | El catedrático habilitó la escritura y otorgó `CREATE EXTERNAL TABLE`. Cumple el enunciado: cada capa en su bucket |
 | 2026-11-13 | **La API se construye en local** con el modelo `champion` y una copia de oro descargados de Databricks, se empaqueta en Docker y se sube al Droplet a mano | Acordado con el catedrático. Sin escritura en S3, la API no puede leer oro desde ahí |
 | 2026-11-13 | El job corre cada martes a las 8:00 y avisa por correo si falla | El enunciado pide programación o disparo por fotos, y una alerta. El MEM publica los martes |
 | 2026-11-13 | El job mantiene una tarea por fuente y por paso, en lugar de 3 tareas | Sigue el orden bronce, plata y oro. Cada tarea se prueba por separado. Se confirma con el catedrático |
@@ -80,7 +81,8 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 
 | Fase | Tarea | Responsable | Estado |
 |---|---|---|---|
-| 0 | Pedir al catedrático escritura en los buckets | Ricardo | Hecho: Free Edition no lo permite. Todo queda en Databricks |
+| 0 | Pedir al catedrático escritura en los buckets | Ricardo | Hecho: `CREATE EXTERNAL TABLE` en las tres capas |
+| 0 | Tablas externas en los buckets: `LOCATION` en `tablas.sql`, rutas obtenidas al correr y oro sin deletion vectors | Ricardo | Hecho, falta migrar las tablas existentes |
 | 1 | Acceso ssh al Droplet verificado | | Pendiente |
 | 1 | `bronze.fotos_precios` con carga incremental y columnas de auditoría | | Pendiente |
 | 2 | Extracción de precios y `silver.precios` con 3 reglas de calidad | | Pendiente |
@@ -104,10 +106,11 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 
 ## Riesgos
 
-1. La API lleva una copia fija de oro. Si nadie la actualiza después de cada corrida, muestra datos de semanas anteriores.
-2. Free Edition tiene cuotas de uso y un máximo de 5 tareas de job a la vez. Con varios desarrolladores probando al mismo tiempo, el cómputo puede apagarse el resto del día.
-3. Bronce y plata de fotos valen 25 puntos y todavía no empiezan. Es la parte con más peso pendiente.
-4. La versión de scikit-learn de la API tiene que coincidir con la de Databricks, o el modelo no carga.
+1. Borrar una tabla externa no borra sus archivos en el bucket. Para recrearla hay que borrarlos a mano. Ver "Cómo cambiar una tabla".
+2. La API lleva una copia fija de oro. Si nadie la actualiza después de cada corrida, muestra datos de semanas anteriores.
+3. Free Edition tiene cuotas de uso y un máximo de 5 tareas de job a la vez. Con varios desarrolladores probando al mismo tiempo, el cómputo puede apagarse el resto del día.
+4. Bronce y plata de fotos valen 25 puntos y todavía no empiezan. Es la parte con más peso pendiente.
+5. La versión de scikit-learn de la API tiene que coincidir con la de Databricks, o el modelo no carga.
 
 ## Bitácora
 
@@ -125,4 +128,5 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 | 2026-11-12 | El job completo corre en unos 2 minutos. Modelo registrado con balanced accuracy de 0.55 contra 0.46 de la línea base. Tablas definidas en un DDL versionado |
 | 2026-11-13 | Se recibió el enunciado oficial. Se alinearon nombres, etiqueta, predicciones, métricas, programación, alertas y documentación |
 | 2026-11-13 | El catedrático confirmó que Free Edition no permite escribir en S3. Todo queda en Databricks y la API se empaqueta con el modelo |
+| 2026-11-13 | El catedrático logró habilitar la escritura y `CREATE EXTERNAL TABLE`. Las tablas pasan a ser externas en los buckets. La API no cambia |
 | 2026-11-13 | El repo pasó a llamarse `equipo-01-gasolina-gt`. El job corrió completo en `equipo_01`: 0.551 contra 0.458 de la línea base. Se borró el catálogo `gas_price` |

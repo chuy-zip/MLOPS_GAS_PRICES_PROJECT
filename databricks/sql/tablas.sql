@@ -7,6 +7,12 @@
 -- CREATE TABLE IF NOT EXISTS no modifica una tabla que ya existe. Para cambiar una tabla
 -- existente, seguir la guía "Cómo cambiar una tabla" en docs/datos/esquemas_medallion.md.
 --
+-- Todas las tablas son externas: sus archivos viven en el bucket de su capa, en
+-- ${ruta_bronze}, ${ruta_silver} y ${ruta_gold}. El notebook los reemplaza con la URL de la
+-- external location más el prefijo del equipo. Borrar una tabla externa no borra sus archivos.
+-- Las tablas de oro desactivan los deletion vectors para que la librería deltalake de Python
+-- pueda leerlas fuera de Databricks.
+--
 -- Las sentencias se separan con punto y coma. No usar punto y coma ni paréntesis dentro de los comentarios.
 --
 -- Nombres según el enunciado: columnas de auditoría _ingestion_timestamp y _source_file,
@@ -22,7 +28,8 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_bronze}.fotos_precios (
   _ingestion_timestamp TIMESTAMP COMMENT 'Fecha y hora de la carga',
   _source_file STRING COMMENT 'Ruta de la foto de origen'
 )
-COMMENT 'Fotos de precios tal como llegan, para poder reprocesarlas si cambia la extracción. Lo pide el enunciado';
+COMMENT 'Fotos de precios tal como llegan, para poder reprocesarlas si cambia la extracción. Lo pide el enunciado'
+LOCATION '${ruta_bronze}/fotos_precios';
 
 CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_bronze}.mem_precios (
   fila_excel INT COMMENT 'Fila del Excel original',
@@ -36,7 +43,8 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_bronze}.mem_precios (
   _file_hash STRING COMMENT 'Huella SHA256 del archivo. Identifica cada versión',
   _ingestion_timestamp TIMESTAMP
 )
-COMMENT 'Filas del Excel del MEM como texto, sin interpretar. Una versión por cada archivo distinto';
+COMMENT 'Filas del Excel del MEM como texto, sin interpretar. Una versión por cada archivo distinto'
+LOCATION '${ruta_bronze}/mem_precios';
 
 CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_bronze}.eia_precios (
   serie STRING COMMENT 'gasolina o diesel',
@@ -47,7 +55,8 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_bronze}.eia_precios (
   _file_hash STRING COMMENT 'Huella SHA256 del archivo. Identifica cada versión',
   _ingestion_timestamp TIMESTAMP
 )
-COMMENT 'Precios internacionales de la EIA como texto, sin interpretar. Una versión por cada archivo distinto';
+COMMENT 'Precios internacionales de la EIA como texto, sin interpretar. Una versión por cada archivo distinto'
+LOCATION '${ruta_bronze}/eia_precios';
 
 -- Plata
 
@@ -59,7 +68,8 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_silver}.precios_oficiales (
   regimen_fiscal STRING COMMENT 'normal, subsidio o exento',
   _source_file STRING
 )
-COMMENT 'Precio oficial del MEM por fecha y combustible. Los días sin publicación no tienen fila';
+COMMENT 'Precio oficial del MEM por fecha y combustible. Los días sin publicación no tienen fila'
+LOCATION '${ruta_silver}/precios_oficiales';
 
 CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_silver}.precios (
   fecha DATE COMMENT 'Fecha de la foto, tomada de la carpeta o del metadato',
@@ -69,7 +79,8 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_silver}.precios (
   ubicacion STRING COMMENT 'Estación, municipio o departamento, si aparece',
   foto_origen STRING COMMENT 'Ruta de la foto en bronce'
 )
-COMMENT 'Precios extraídos de las fotos que pasaron las reglas de calidad. Llave: fecha, ubicacion, combustible y modalidad. Lo pide el enunciado';
+COMMENT 'Precios extraídos de las fotos que pasaron las reglas de calidad. Llave: fecha, ubicacion, combustible y modalidad. Lo pide el enunciado'
+LOCATION '${ruta_silver}/precios';
 
 CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_silver}.precios_rejected (
   fecha DATE COMMENT 'Fecha de la foto, si se pudo obtener',
@@ -80,7 +91,8 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_silver}.precios_rejected (
   foto_origen STRING COMMENT 'Ruta de la foto en bronce',
   motivo STRING COMMENT 'Regla de calidad que falló'
 )
-COMMENT 'Fotos o filas que no pasaron las reglas de calidad, con el motivo. Lo pide el enunciado';
+COMMENT 'Fotos o filas que no pasaron las reglas de calidad, con el motivo. Lo pide el enunciado'
+LOCATION '${ruta_silver}/precios_rejected';
 
 CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_silver}.precios_internacionales (
   fecha DATE,
@@ -88,7 +100,8 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_silver}.precios_internacionales
   precio_usd_galon DOUBLE,
   _source_file STRING
 )
-COMMENT 'Precio spot de la EIA por día de mercado y serie';
+COMMENT 'Precio spot de la EIA por día de mercado y serie'
+LOCATION '${ruta_silver}/precios_internacionales';
 
 -- Oro. El enunciado pide un comentario en cada tabla y columna de oro.
 
@@ -101,7 +114,9 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.precios_diarios (
   regimen_fiscal STRING COMMENT 'normal, subsidio o exento, según las notas del Excel del MEM',
   n_fotos INT COMMENT 'Fotos con precio válido ese día, según silver.precios. 0 si esa tabla no existe'
 )
-COMMENT 'Calendario completo por combustible, sin huecos. Base de las variables semanales';
+COMMENT 'Calendario completo por combustible, sin huecos. Base de las variables semanales'
+LOCATION '${ruta_gold}/precios_diarios'
+TBLPROPERTIES ('delta.enableDeletionVectors' = false);
 
 CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.precio_semanal (
   semana DATE COMMENT 'Martes de inicio de la semana. Las semanas van de martes a lunes',
@@ -112,7 +127,9 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.precio_semanal (
   precio_maximo DOUBLE COMMENT 'Precio máximo de la semana',
   n_observaciones INT COMMENT 'Días con precio oficial, o fotos con precio válido, en la semana'
 )
-COMMENT 'Precio promedio, mínimo y máximo por semana, combustible y fuente. La API lo usa para /precios';
+COMMENT 'Precio promedio, mínimo y máximo por semana, combustible y fuente. La API lo usa para /precios'
+LOCATION '${ruta_gold}/precio_semanal'
+TBLPROPERTIES ('delta.enableDeletionVectors' = false);
 
 CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.variacion_semanal (
   semana DATE COMMENT 'Martes de inicio de la semana',
@@ -124,7 +141,9 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.variacion_semanal (
   variacion_pct DOUBLE COMMENT 'Diferencia contra la semana anterior, en porcentaje',
   direccion STRING COMMENT 'sube, baja o se_mantiene con umbral de Q0.10. Nula si no hay semana anterior'
 )
-COMMENT 'Variación semanal del precio y su dirección, por combustible y fuente';
+COMMENT 'Variación semanal del precio y su dirección, por combustible y fuente'
+LOCATION '${ruta_gold}/variacion_semanal'
+TBLPROPERTIES ('delta.enableDeletionVectors' = false);
 
 CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.features_modelo (
   semana DATE COMMENT 'Martes de inicio de la semana. Los datos son los del cierre, el lunes',
@@ -148,7 +167,9 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.features_modelo (
   cambio_siguiente DOUBLE COMMENT 'Cambio de precio de la semana siguiente. Nulo en la semana actual',
   etiqueta STRING COMMENT 'sube, baja o se_mantiene con umbral de Q0.10. Nula en la semana actual, que es la que se predice'
 )
-COMMENT 'Variables y etiqueta del modelo de tendencia, una fila por semana y combustible. Es la tabla features_modelo del enunciado';
+COMMENT 'Variables y etiqueta del modelo de tendencia, una fila por semana y combustible. Es la tabla features_modelo del enunciado'
+LOCATION '${ruta_gold}/features_modelo'
+TBLPROPERTIES ('delta.enableDeletionVectors' = false);
 
 CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.referencia_actual (
   combustible STRING COMMENT 'super, regular o diesel',
@@ -159,7 +180,9 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.referencia_actual (
   regimen_fiscal STRING COMMENT 'normal, subsidio o exento',
   proximo_cambio DATE COMMENT 'Lunes en que se espera el próximo cambio'
 )
-COMMENT 'Precio oficial vigente por combustible. La API lo usa para /precios/actual';
+COMMENT 'Precio oficial vigente por combustible. La API lo usa para /precios/actual'
+LOCATION '${ruta_gold}/referencia_actual'
+TBLPROPERTIES ('delta.enableDeletionVectors' = false);
 
 CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.predicciones (
   semana DATE COMMENT 'Martes de inicio de la semana con los datos usados para predecir',
@@ -175,7 +198,9 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.predicciones (
   direccion_real STRING COMMENT 'Dirección que realmente ocurrió. Nula hasta que llega la semana objetivo',
   acierto BOOLEAN COMMENT 'True si la predicción coincidió con la dirección real. Nulo hasta conocerla'
 )
-COMMENT 'Una fila por semana y combustible con la predicción. La API la usa para /prediccion';
+COMMENT 'Una fila por semana y combustible con la predicción. La API la usa para /prediccion'
+LOCATION '${ruta_gold}/predicciones'
+TBLPROPERTIES ('delta.enableDeletionVectors' = false);
 
 CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.metricas_modelo (
   version_modelo STRING COMMENT 'Versión registrada del modelo',
@@ -191,4 +216,6 @@ CREATE TABLE IF NOT EXISTS ${catalogo}.${esquema_gold}.metricas_modelo (
   linea_base_direccion_con_movimiento DOUBLE COMMENT 'Acierto de la dirección de la línea base cuando el precio se movió',
   supera_linea_base BOOLEAN COMMENT 'True si la exactitud balanceada del modelo supera a la de la línea base'
 )
-COMMENT 'Métricas de cada versión del modelo contra la línea base. La API la usa para /modelo/metricas';
+COMMENT 'Métricas de cada versión del modelo contra la línea base. La API la usa para /modelo/metricas'
+LOCATION '${ruta_gold}/metricas_modelo'
+TBLPROPERTIES ('delta.enableDeletionVectors' = false);

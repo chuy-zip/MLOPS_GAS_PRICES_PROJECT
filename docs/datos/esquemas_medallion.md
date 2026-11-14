@@ -5,19 +5,21 @@
 | Capa | Dónde vive | Qué guarda | Quién escribe |
 |---|---|---|---|
 | Raw | Bucket de `xloc-raw` | Las fotos tal como las dejó el catedrático | Nadie del equipo. Es solo de lectura |
-| Bronce | Databricks, esquema `equipo_01.bronze` | Las fotos, el Excel del MEM y la EIA como tablas, sin interpretar. También las copias de los archivos | Tareas de ingesta |
-| Plata | Databricks, esquema `equipo_01.silver` | Datos interpretados, validados y con un esquema común | Tareas de limpieza |
-| Oro | Databricks, esquema `equipo_01.gold` | Tablas semanales, variables, predicciones, métricas y el modelo | Tareas de agregación y entrenamiento |
+| Bronce | Bucket de `xloc-cusn`, en `equipo-01/bronze/` | Las fotos, el Excel del MEM y la EIA como tablas, sin interpretar | Tareas de ingesta |
+| Plata | Bucket de `xloc-ag`, en `equipo-01/silver/` | Datos interpretados, validados y con un esquema común | Tareas de limpieza |
+| Oro | Bucket de `xloc-au`, en `equipo-01/gold/` | Tablas semanales, variables, predicciones y métricas | Tareas de agregación y entrenamiento |
 
-**Por qué no en los buckets.** El enunciado pone cada capa en su bucket de S3, pero Databricks Free Edition no permite escribir en un proveedor de nube externo. El 2026-11-13 se acordó con el catedrático trabajar todo dentro de Databricks. Los buckets solo se usan para leer las fotos.
+**Tablas externas en los buckets.** Cada capa vive en su bucket, como pide el enunciado. Las tablas son externas de Unity Catalog: están registradas en `equipo_01` con sus permisos, linaje y comentarios, pero sus archivos quedan en una ruta fija del bucket, por ejemplo `equipo-01/gold/predicciones`. El permiso que lo permite es `CREATE EXTERNAL TABLE`, que el catedrático otorgó el 2026-11-13.
+
+**Lo que se queda en Databricks:** el volumen `archivos`, con las copias del Excel y de la EIA, y el modelo registrado. Ninguno de los dos se lee desde afuera.
 
 **Raw contra bronce.** Raw es la zona de aterrizaje de los archivos originales y nunca se modifica. Bronce guarda esos mismos datos como tablas Delta, sin limpiarlos, más columnas de control: cuándo se cargaron, de qué archivo vienen y su hash. Si una regla de limpieza cambia, plata y oro se reconstruyen desde bronce sin volver a leer todo raw.
 
-**Convención del enunciado.** Cada equipo usa un catálogo o esquemas con el prefijo `equipo_XX`. Para este equipo: catálogo `equipo_01`.
+**Convención del enunciado.** Cada equipo usa un catálogo o esquemas con el prefijo `equipo_XX`, y en cada bucket escribe solo dentro de su prefijo `equipo-XX/`. Para este equipo: catálogo `equipo_01` y prefijo `equipo-01/`. Las external locations y el prefijo son variables del bundle.
 
 ## Organización en Unity Catalog
 
-Un esquema por capa, en el almacenamiento por defecto de Databricks. Los conceptos y los permisos están explicados en [databricks.md](../infraestructura/databricks.md).
+Un esquema por capa. Los esquemas no tienen ubicación propia: cada tabla declara la suya con `LOCATION` en `databricks/sql/tablas.sql`. Los conceptos y los permisos están explicados en [databricks.md](../infraestructura/databricks.md).
 
 **Catálogo propio `equipo_01`.** Sigue la convención del enunciado, separa el proyecto del resto del workspace y permite dar permisos al catálogo completo. Lo crea `infra/sql/00_unity_catalog.sql`. Hasta el 2026-11-13 el catálogo se llamaba `gas_price`.
 
@@ -76,10 +78,19 @@ Las filas que ya existían quedan con la columna nueva en nulo. En plata y oro n
 
 Unity Catalog no deja hacer estos cambios sin reescribir la tabla, así que se borra y se recrea.
 
+**Importante: las tablas son externas.** `DROP TABLE` solo borra el registro en Unity Catalog. Los archivos quedan en el bucket, y si se recrea la tabla en la misma ruta con otras columnas, falla o recupera los datos viejos. Por eso hay que borrar también los archivos.
+
 1. Pasos 1 a 5 de la sección anterior, con el cambio que corresponda.
-2. Cuando termine el despliegue, en el SQL Editor: `DROP TABLE gas_price.<esquema>.<tabla>;`
-3. Correr el job `equipo-01-setup`, que la recrea con la definición nueva.
-4. Correr `equipo-01-pipeline`, que la llena.
+2. Cuando termine el despliegue, anotar la ruta de la tabla y borrarla. En el SQL Editor:
+
+   ```sql
+   DESCRIBE DETAIL equipo_01.<esquema>.<tabla>;   -- copiar la columna location
+   DROP TABLE equipo_01.<esquema>.<tabla>;
+   ```
+
+3. Borrar sus archivos, en un notebook: `dbutils.fs.rm("<location>", recurse=True)`.
+4. Correr el job `equipo-01-setup`, que la recrea con la definición nueva.
+5. Correr `equipo-01-pipeline`, que la llena.
 
 **En plata y oro** no se pierde nada, porque el pipeline las reconstruye en unos 2 minutos. **En bronce** se pierden las versiones anteriores de los archivos: al recrearla solo vuelve la versión actual del repo. Antes de borrar una tabla de bronce, consultarlo con el equipo.
 

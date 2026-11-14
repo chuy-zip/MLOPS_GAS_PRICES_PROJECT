@@ -30,14 +30,14 @@ flowchart LR
     DEV(("Equipo")) -- "ssh" --> DROP
 ```
 
-**Decisión del 2026-11-13, acordada con el catedrático.** Databricks Free Edition no permite escribir en un proveedor de nube externo, así que las external locations de bronce, plata y oro no se pueden usar para escribir. Por eso:
+**Decisión del 2026-11-13, acordada con el catedrático.** El Droplet no tiene acceso a los buckets de S3, así que la API no puede leer oro desde ahí. Por eso:
 
 1. **Todo el procesamiento ocurre en Databricks,** hasta el entrenamiento del modelo y la predicción.
 2. **Se descargan de Databricks** el modelo `champion` y una copia de las tablas de oro que usa la API.
 3. **La API se construye y se prueba en local,** con esos archivos dentro de su carpeta.
 4. **El modelo y los datos se empaquetan con la API** en una imagen de Docker, que se sube al Droplet a mano.
 
-Databricks solo lee los buckets: las fotos de `xloc-raw`, por su external location. Las tablas viven en el almacenamiento de Databricks. Nadie del equipo tiene credenciales de AWS.
+**Las tablas sí viven en los buckets.** El catedrático habilitó la escritura en `xloc-cusn`, `xloc-ag` y `xloc-au` y otorgó `CREATE EXTERNAL TABLE`. Todas las tablas son externas de Unity Catalog, en el bucket de su capa y dentro del prefijo `equipo-01/`. Databricks escribe y lee por medio de las external locations. Nadie del equipo tiene credenciales de AWS.
 
 ## Jobs
 
