@@ -54,9 +54,9 @@ En serverless no se elige versión de runtime, tipo de nodo ni cantidad de worke
 | Concepto | Qué es | Ejemplo en el proyecto |
 |---|---|---|
 | External location | Permiso para usar una ruta de S3 con una credencial. La crea un administrador | `xloc-raw`, `xloc-cusn`, `xloc-ag`, `xloc-au`, creadas por el catedrático |
-| Tabla administrada | Tabla cuyos archivos guarda y administra Unity Catalog. Si se borra la tabla, se borran sus datos | Todas las tablas de bronce, plata y oro |
-| Ubicación administrada | Ruta donde un esquema guarda sus tablas administradas. Si el esquema no tiene una, usa la del catálogo | Cada esquema del proyecto apunta a su bucket |
-| Tabla externa | Tabla que apunta a archivos en una ruta elegida a mano. Si se borra la tabla, los archivos quedan | No se usa |
+| Tabla administrada | Tabla cuyos archivos guarda y administra Unity Catalog. Si se borra la tabla, se borran sus datos | Ninguna tabla del pipeline. El modelo registrado sí vive así |
+| Ubicación administrada | Ruta donde un esquema guarda sus tablas administradas. Si el esquema no tiene una, usa la del catálogo | No se usa: requiere `CREATE MANAGED STORAGE`, que no tenemos |
+| Tabla externa | Tabla que apunta a archivos en una ruta elegida a mano. Si se borra la tabla, los archivos quedan | Todas las tablas de bronce, plata y oro, en `equipo-01/<capa>/<tabla>` de cada bucket |
 | Volumen | Objeto de Unity Catalog para guardar archivos que no son tablas, como imágenes o Excel | Un volumen administrado en bronce para la copia del Excel y los checkpoints |
 
 **Por qué las tablas van en los buckets.** El diagrama del catedrático pone cada capa en S3, y él creó una external location por capa. Las tablas son externas, en una ruta fija dentro del prefijo `equipo-01/` de cada bucket. Ver la sección "Estado final" al final de este documento.
@@ -80,7 +80,7 @@ En el código no se escriben las URL de los buckets. Se obtienen en tiempo de ej
 
 ## Permisos
 
-Resultado de `SHOW GRANTS ON EXTERNAL LOCATION`. Las 4 ubicaciones tienen los mismos permisos:
+Estado inicial, del 2026-11-11, según `SHOW GRANTS ON EXTERNAL LOCATION`. Los permisos actuales están en "Estado final", al final de este documento. Las 4 ubicaciones tenían los mismos permisos:
 
 | Principal | Permiso |
 |---|---|
@@ -94,7 +94,7 @@ Resultado de `SHOW GRANTS ON EXTERNAL LOCATION`. Las 4 ubicaciones tienen los mi
 2. En raw no podemos escribir, porque la ubicación está limitada a solo lectura.
 3. "File events" activado en raw permite detectar fotos nuevas y disparar el job.
 
-**Qué falta:** para que un esquema guarde sus tablas en un bucket hace falta `CREATE MANAGED STORAGE` sobre esa external location. Según la [documentación de ubicaciones administradas](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/managed-storage), ese permiso es el que permite definir la ubicación al crear el esquema. No aparece en la lista, aunque podríamos tenerlo como administradores. Hay que probarlo.
+**Qué faltaba entonces:** para que un esquema guarde sus tablas en un bucket hace falta `CREATE MANAGED STORAGE` sobre esa external location. Según la [documentación de ubicaciones administradas](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/managed-storage), ese permiso es el que permite definir la ubicación al crear el esquema. No aparece en la lista, aunque podríamos tenerlo como administradores. Hay que probarlo.
 
 ## Prueba de permisos
 

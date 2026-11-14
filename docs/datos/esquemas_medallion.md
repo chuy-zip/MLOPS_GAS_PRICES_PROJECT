@@ -96,9 +96,16 @@ Unity Catalog no deja hacer estos cambios sin reescribir la tabla, así que se b
 
 ### Agregar una tabla nueva
 
-Por ejemplo, las tablas de fotos.
+Por ejemplo, una tabla de revisión manual de fotos.
 
-1. Agregar su `CREATE TABLE IF NOT EXISTS` en `databricks/sql/tablas.sql`, con columnas, tipos y comentarios.
+1. Agregar su `CREATE TABLE IF NOT EXISTS` en `databricks/sql/tablas.sql`, con columnas, tipos y comentarios. Al final, su ubicación en el bucket de su capa, igual que las demás:
+
+   ```sql
+   COMMENT 'Qué guarda la tabla'
+   LOCATION '${ruta_silver}/revision_manual';
+   ```
+
+   En oro, agregar también `TBLPROPERTIES ('delta.enableDeletionVectors' = false)`. Los tests revisan las dos cosas.
 2. Escribir en ella con `insertInto` o `MERGE`, nunca con `saveAsTable`. `saveAsTable` puede cambiar la definición de la tabla.
 3. Agregar la tabla en `tests/test_tablas_sql.py`: en la lista de `test_estan_todas_las_tablas` y, si su código está en `src/`, en un test que compare sus columnas.
 4. Hacer merge. El despliegue corre `equipo-01-setup` y la tabla queda creada sin pasos manuales.

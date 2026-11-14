@@ -41,11 +41,11 @@ Puntos de la rúbrica y estado al 2026-11-13:
 | 2026-11-12 | Ruleset en `main` que exige el check `plan` en verde para hacer merge. Sin aprobaciones obligatorias | Evita que un bundle roto llegue a `main` y rompa el despliegue, sin frenar al equipo con revisiones. Reemplaza la decisión anterior de no proteger `main` |
 | 2026-11-11 | Primero se valida la infraestructura (bundle y CI) y después se explora el bucket | El job de exploración es la primera prueba de punta a punta del despliegue |
 | 2026-11-11 | Catálogo `gas_price` con esquemas `bronze`, `silver` y `gold`. El catálogo ya está creado | La cuenta de Databricks es del equipo, así que se pudo crear sin pedir permiso |
-| 2026-11-11 | Mientras no se pueda escribir en los buckets, las tablas usan el almacenamiento por defecto | `xloc-cusn` es de solo lectura. No se bloquea el proyecto esperando al catedrático |
+| 2026-11-11 | Mientras no se pueda escribir en los buckets, las tablas usan el almacenamiento por defecto | `xloc-cusn` es de solo lectura. No se bloquea el proyecto esperando al catedrático. Reemplazada el 2026-11-13 por las tablas externas |
 | 2026-11-11 | "Buen precio" se resuelve comparando con la referencia oficial. La tendencia, con un modelo de clasificación | Ver [modelo.md](../modelo/modelo.md) |
 | 2026-11-11 | El horizonte de la predicción es el próximo cambio de referencia, 7 días o menos | El precio oficial cambia una vez por semana. "Esperar" significa esperar a ese cambio |
 | 2026-11-11 | No se exige que el modelo supere una línea base. Las métricas se reportan sin umbral mínimo | Decisión del equipo |
-| 2026-11-11 | Un esquema por capa, cada uno con su bucket como ubicación administrada | Cumple el diagrama con tablas administradas normales. Requiere `CREATE MANAGED STORAGE`. Ver [databricks.md](../infraestructura/databricks.md) |
+| 2026-11-11 | Un esquema por capa, cada uno con su bucket como ubicación administrada | Cumple el diagrama con tablas administradas normales. Requiere `CREATE MANAGED STORAGE`. Ver [databricks.md](../infraestructura/databricks.md). Reemplazada el 2026-11-13: el permiso que llegó fue `CREATE EXTERNAL TABLE`, así que las tablas son externas |
 | 2026-11-11 | Los jobs y notebooks se despliegan con bundles de Databricks. No se usa Terraform | Sin cuentas externas y el estado vive en el workspace. Ver [ci_cd.md](../infraestructura/ci_cd.md) |
 | 2026-11-11 | Un solo ambiente compartido. Solo el CI despliega, y solo desde `main` | Evita que cada persona tenga una versión distinta desplegada |
 | 2026-11-11 | El catálogo y los esquemas se crean una sola vez con un script SQL versionado | Son pocos objetos y no cambian |

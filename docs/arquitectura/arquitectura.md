@@ -119,7 +119,7 @@ Lo que pide el enunciado:
 
 1. **Acceso:** por ssh con el usuario `equipo-01` y las llaves asignadas. Todo el trabajo vive en `/home/equipo-01/`. No se instalan paquetes del sistema ni se reinicia el servidor.
 2. **Entorno aislado:** Docker recomendado, o conda, uv o venv. La elección se justifica en el README.
-3. **Datos:** la imagen lleva el modelo `champion` y una copia de las tablas de oro, descargados de Databricks. El enunciado pedía leer oro desde S3, pero Free Edition no permite escribir en S3. Ver la decisión al inicio de este documento.
+3. **Datos:** la imagen lleva el modelo `champion` y una copia de las tablas de oro, descargados de Databricks. El enunciado pedía leer oro desde S3, pero el Droplet no tiene acceso a los buckets. Ver la decisión al inicio de este documento.
 4. **Publicación:** en el puerto `80XX` del equipo, corriendo aunque se cierre la sesión ssh, con `restart: unless-stopped` o `systemd`.
 5. **Pruebas de usuario final:** una colección de `curl`, Postman o un script que muestre el precio actual y la predicción de los tres combustibles.
 
