@@ -82,7 +82,7 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 | Fase | Tarea | Responsable | Estado |
 |---|---|---|---|
 | 0 | Pedir al catedrático escritura en los buckets | Ricardo | Hecho: `CREATE EXTERNAL TABLE` en las tres capas |
-| 0 | Tablas externas en los buckets: `LOCATION` en `tablas.sql`, rutas obtenidas al correr y oro sin deletion vectors | Ricardo | Hecho, falta migrar las tablas existentes |
+| 0 | Tablas externas en los buckets: `LOCATION` en `tablas.sql`, rutas obtenidas al correr y oro sin deletion vectors | Ricardo | Hecho. Las 14 tablas son externas y están en su bucket, verificado con la CLI |
 | 1 | Acceso ssh al Droplet verificado | | Pendiente |
 | 1 | `bronze.fotos_precios` con carga incremental y columnas de auditoría | | Pendiente |
 | 2 | Extracción de precios y `silver.precios` con 3 reglas de calidad | | Pendiente |
@@ -129,4 +129,5 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 | 2026-11-13 | Se recibió el enunciado oficial. Se alinearon nombres, etiqueta, predicciones, métricas, programación, alertas y documentación |
 | 2026-11-13 | El catedrático confirmó que Free Edition no permite escribir en S3. Todo queda en Databricks y la API se empaqueta con el modelo |
 | 2026-11-13 | El catedrático logró habilitar la escritura y `CREATE EXTERNAL TABLE`. Las tablas pasan a ser externas en los buckets. La API no cambia |
+| 2026-11-13 | Migración a tablas externas hecha. El pipeline corrió completo con las tablas en los buckets y el modelo versión 3. `exportar_para_api.py` verificó que el modelo descargado predice lo mismo |
 | 2026-11-13 | El repo pasó a llamarse `equipo-01-gasolina-gt`. El job corrió completo en `equipo_01`: 0.551 contra 0.458 de la línea base. Se borró el catálogo `gas_price` |
