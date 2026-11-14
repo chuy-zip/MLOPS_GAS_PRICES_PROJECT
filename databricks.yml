@@ -33,6 +33,18 @@ variables:
   esquema_gold:
     description: Esquema de la capa de oro
     default: gold
+  ubicacion_bronze:
+    description: External location del bucket de bronce
+    default: xloc-cusn
+  ubicacion_silver:
+    description: External location del bucket de plata
+    default: xloc-ag
+  ubicacion_gold:
+    description: External location del bucket de oro
+    default: xloc-au
+  prefijo_equipo:
+    description: Carpeta del equipo dentro de cada bucket, según el enunciado
+    default: equipo-01
   repo_raw:
     description: URL base de los archivos crudos del repo en GitHub. De aquí se descargan los datos de data/
     default: https://raw.githubusercontent.com/chuy-zip/equipo-01-gasolina-gt/main

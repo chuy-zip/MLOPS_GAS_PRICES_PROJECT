@@ -54,12 +54,12 @@ En serverless no se elige versión de runtime, tipo de nodo ni cantidad de worke
 | Concepto | Qué es | Ejemplo en el proyecto |
 |---|---|---|
 | External location | Permiso para usar una ruta de S3 con una credencial. La crea un administrador | `xloc-raw`, `xloc-cusn`, `xloc-ag`, `xloc-au`, creadas por el catedrático |
-| Tabla administrada | Tabla cuyos archivos guarda y administra Unity Catalog. Si se borra la tabla, se borran sus datos | Todas las tablas de bronce, plata y oro |
-| Ubicación administrada | Ruta donde un esquema guarda sus tablas administradas. Si el esquema no tiene una, usa la del catálogo | Cada esquema del proyecto apunta a su bucket |
-| Tabla externa | Tabla que apunta a archivos en una ruta elegida a mano. Si se borra la tabla, los archivos quedan | No se usa |
+| Tabla administrada | Tabla cuyos archivos guarda y administra Unity Catalog. Si se borra la tabla, se borran sus datos | Ninguna tabla del pipeline. El modelo registrado sí vive así |
+| Ubicación administrada | Ruta donde un esquema guarda sus tablas administradas. Si el esquema no tiene una, usa la del catálogo | No se usa: requiere `CREATE MANAGED STORAGE`, que no tenemos |
+| Tabla externa | Tabla que apunta a archivos en una ruta elegida a mano. Si se borra la tabla, los archivos quedan | Todas las tablas de bronce, plata y oro, en `equipo-01/<capa>/<tabla>` de cada bucket |
 | Volumen | Objeto de Unity Catalog para guardar archivos que no son tablas, como imágenes o Excel | Un volumen administrado en bronce para la copia del Excel y los checkpoints |
 
-**Por qué las tablas van en los buckets.** El diagrama del catedrático pone cada capa en S3, y él creó una external location por capa. La forma más simple de cumplirlo es que cada esquema tenga su bucket como ubicación administrada. Así las tablas son administradas normales: se crean desde `databricks/sql/tablas.sql` y Unity Catalog decide dónde van los archivos. No hacen falta tablas externas. Mientras no lleguen los permisos, ver "Resultado de la prueba" más abajo, las tablas usan el almacenamiento por defecto.
+**Por qué las tablas van en los buckets.** El diagrama del catedrático pone cada capa en S3, y él creó una external location por capa. Las tablas son externas, en una ruta fija dentro del prefijo `equipo-01/` de cada bucket. Ver la sección "Estado final" al final de este documento.
 
 **Raw no necesita ningún objeto.** Las fotos se leen directo por ruta, con el permiso `READ FILES` que ya tenemos.
 
@@ -80,7 +80,7 @@ En el código no se escriben las URL de los buckets. Se obtienen en tiempo de ej
 
 ## Permisos
 
-Resultado de `SHOW GRANTS ON EXTERNAL LOCATION`. Las 4 ubicaciones tienen los mismos permisos:
+Estado inicial, del 2026-11-11, según `SHOW GRANTS ON EXTERNAL LOCATION`. Los permisos actuales están en "Estado final", al final de este documento. Las 4 ubicaciones tenían los mismos permisos:
 
 | Principal | Permiso |
 |---|---|
@@ -94,7 +94,7 @@ Resultado de `SHOW GRANTS ON EXTERNAL LOCATION`. Las 4 ubicaciones tienen los mi
 2. En raw no podemos escribir, porque la ubicación está limitada a solo lectura.
 3. "File events" activado en raw permite detectar fotos nuevas y disparar el job.
 
-**Qué falta:** para que un esquema guarde sus tablas en un bucket hace falta `CREATE MANAGED STORAGE` sobre esa external location. Según la [documentación de ubicaciones administradas](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/managed-storage), ese permiso es el que permite definir la ubicación al crear el esquema. No aparece en la lista, aunque podríamos tenerlo como administradores. Hay que probarlo.
+**Qué faltaba entonces:** para que un esquema guarde sus tablas en un bucket hace falta `CREATE MANAGED STORAGE` sobre esa external location. Según la [documentación de ubicaciones administradas](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/managed-storage), ese permiso es el que permite definir la ubicación al crear el esquema. No aparece en la lista, aunque podríamos tenerlo como administradores. Hay que probarlo.
 
 ## Prueba de permisos
 
@@ -144,15 +144,23 @@ La causa es que `xloc-cusn` tiene activada la opción "Limit to read-only use". 
 
 Se le pide al catedrático desactivar "Limit to read-only use" en `xloc-cusn` y `xloc-ag`, y otorgar `CREATE MANAGED STORAGE` en las tres.
 
-## Decisión final (2026-11-13)
+## Estado final (2026-11-13)
 
-El catedrático confirmó que **Databricks Free Edition no permite escribir en un proveedor de nube externo.** Las external locations de bronce, plata y oro no se pueden habilitar para escritura.
+Primero el catedrático indicó que Free Edition no permitía escribir en un proveedor de nube externo, y se acordó trabajar todo en Databricks. El mismo día logró habilitar la escritura. Revisado con la CLI:
 
-Se acordó:
+| External location | Solo lectura | Permisos de `account users` |
+|---|---|---|
+| `xloc-raw` | Sí | `BROWSE`, `READ FILES`, `WRITE FILES` |
+| `xloc-cusn` | No | `BROWSE`, `CREATE EXTERNAL TABLE`, `READ FILES`, `WRITE FILES` |
+| `xloc-ag` | No | `BROWSE`, `CREATE EXTERNAL TABLE`, `READ FILES`, `WRITE FILES` |
+| `xloc-au` | No | `BROWSE`, `CREATE EXTERNAL TABLE`, `READ FILES`, `WRITE FILES` |
 
-1. Las tablas viven en el almacenamiento por defecto de Databricks, en el catálogo `equipo_01`. Así funcionan desde el inicio y no cambia nada.
-2. Los buckets solo se usan para leer las fotos de `xloc-raw`.
-3. La API no lee S3. Usa el modelo y una copia de oro descargados de Databricks. Ver [arquitectura.md](../arquitectura/arquitectura.md).
+Con eso:
+
+1. **Todas las tablas son externas,** en el bucket de su capa y dentro del prefijo `equipo-01/`. `CREATE EXTERNAL TABLE` es el permiso que lo permite. `CREATE MANAGED STORAGE` no hace falta.
+2. **Raw sigue siendo de solo lectura.** Las fotos se leen desde ahí.
+3. **El volumen `archivos` y el modelo se quedan en Databricks.** Nadie los lee desde afuera.
+4. **La API no cambia.** El Droplet no tiene acceso a S3, así que sigue usando el modelo y una copia de oro descargados con `scripts/exportar_para_api.py`. Ver [arquitectura.md](../arquitectura/arquitectura.md).
 
 Las pruebas y los permisos de arriba quedan como registro de lo que se intentó.
 

@@ -23,11 +23,28 @@ def sentencias():
     return [s.strip() for s in sin_comentarios.split(";") if s.strip()]
 
 
+def partes(sentencia: str) -> tuple[str, str]:
+    """Separa la lista de columnas de lo que viene después: COMMENT, LOCATION y TBLPROPERTIES.
+
+    Busca el paréntesis que cierra la lista, contando los de adentro, como en DECIMAL(10,2).
+    """
+    inicio = sentencia.index("(")
+    nivel = 0
+    for i in range(inicio, len(sentencia)):
+        if sentencia[i] == "(":
+            nivel += 1
+        elif sentencia[i] == ")":
+            nivel -= 1
+            if nivel == 0:
+                return sentencia[inicio + 1 : i], sentencia[i + 1 :]
+    raise ValueError(f"Paréntesis sin cerrar: {sentencia[:60]}")
+
+
 def columnas_por_tabla() -> dict[str, list[str]]:
     tablas = {}
     for sentencia in sentencias():
         nombre = re.search(r"EXISTS\s+\S+\.(\w+)\s*\(", sentencia).group(1)
-        cuerpo = sentencia.split("(", 1)[1].rsplit(")", 1)[0]
+        cuerpo, _ = partes(sentencia)
         tablas[nombre] = [linea.strip().split()[0] for linea in cuerpo.splitlines() if linea.strip()]
     return tablas
 
@@ -87,11 +104,25 @@ def test_cada_columna_de_oro_tiene_comentario():
     for sentencia in sentencias():
         if "${esquema_gold}" not in sentencia:
             continue
-        cuerpo = sentencia.split("(", 1)[1].rsplit(")", 1)[0]
+        cuerpo, resto = partes(sentencia)
         for linea in cuerpo.splitlines():
             if linea.strip():
                 assert "COMMENT" in linea, f"Columna de oro sin comentario: {linea.strip()}"
-        assert sentencia.rsplit(")", 1)[1].strip().startswith("COMMENT"), "Tabla de oro sin comentario"
+        assert resto.strip().startswith("COMMENT"), "Tabla de oro sin comentario"
+
+
+def test_cada_tabla_vive_en_el_bucket_de_su_capa():
+    for sentencia in sentencias():
+        esquema, tabla = re.search(r"\$\{esquema_(bronze|silver|gold)\}\.(\w+)", sentencia).groups()
+        _, resto = partes(sentencia)
+        assert f"LOCATION '${{ruta_{esquema}}}/{tabla}'" in resto, f"{tabla} no está en el bucket de {esquema}"
+
+
+def test_oro_sin_deletion_vectors_para_leerlo_fuera_de_databricks():
+    for sentencia in sentencias():
+        if "${esquema_gold}" in sentencia:
+            _, resto = partes(sentencia)
+            assert "'delta.enableDeletionVectors' = false" in resto, sentencia[:70]
 
 
 def test_predicciones_coincide_con_el_codigo(tablas, oro):

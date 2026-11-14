@@ -2,7 +2,8 @@
 # MAGIC %md
 # MAGIC # 40 Entrenamiento del modelo de tendencia
 # MAGIC
-# MAGIC 1. Lee `gold.features_modelo`. Si esos datos ya se usaron en una corrida anterior, termina sin entrenar.
+# MAGIC 1. Lee `gold.features_modelo`. Si esos datos ya se usaron en una corrida anterior, termina sin entrenar,
+# MAGIC    salvo que el parámetro `forzar_entrenamiento` valga `true`.
 # MAGIC 2. Evalúa con partición temporal: entrena con el pasado y prueba con los últimos dos años.
 # MAGIC    Registra las métricas del modelo y de la regla "repetir la semana pasada", para comparar.
 # MAGIC 3. Entrena el modelo final con todas las semanas que tienen etiqueta.
@@ -17,10 +18,12 @@
 dbutils.widgets.text("catalogo", "equipo_01")
 dbutils.widgets.text("esquema_gold", "gold")
 dbutils.widgets.text("experimento", "/Shared/equipo-01-tendencia")
+dbutils.widgets.text("forzar_entrenamiento", "false")
 
 catalogo = dbutils.widgets.get("catalogo")
 esquema_gold = dbutils.widgets.get("esquema_gold")
 experimento = dbutils.widgets.get("experimento")
+forzar = dbutils.widgets.get("forzar_entrenamiento").strip().lower() == "true"
 
 # COMMAND ----------
 
@@ -55,7 +58,7 @@ huella = hashlib.sha256(pd.util.hash_pandas_object(datos[columnas], index=False)
 previas = mlflow.search_runs(
     filter_string=f"tags.huella_datos = '{huella}' and tags.modelo = '{NOMBRE_MODELO}'", max_results=1
 )
-if len(previas) > 0:
+if len(previas) > 0 and not forzar:
     dbutils.notebook.exit(f"Sin cambios: estos datos ya se usaron en la corrida {previas.iloc[0]['run_id']}")
 
 print(f"{len(datos)} filas con etiqueta, de {datos['semana'].min()} a {datos['semana'].max()}")
