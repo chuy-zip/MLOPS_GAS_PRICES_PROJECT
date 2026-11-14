@@ -226,3 +226,11 @@ __marimo__/
 mlruns/
 mlartifacts/
 mlflow.db
+
+# Artefactos que descarga scripts/exportar_para_api.py. Cambian cada semana y no van al repo
+api/artefactos/
+
+# Llaves SSH y credenciales. El enunciado pide que no se suban
+*.pem
+id_rsa*
+id_ed25519*

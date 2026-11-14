@@ -99,13 +99,19 @@ Igual que en el Ejercicio 5:
 
 **Entrada del modelo:** una fila con `combustible` como texto (`super`, `regular` o `diesel`) y las variables numéricas de `gold.features_modelo`. **Salida:** `sube`, `baja` o `se_mantiene`.
 
-## Predicciones y métricas para la API
+## Predicciones y métricas
 
-La API no carga el modelo. Lee dos tablas de oro que escribe el job:
+El job escribe dos tablas de oro:
 
-1. **`gold.predicciones`**, escrita por la tarea `50_predicciones`. Una fila por semana y combustible: la dirección predicha para la semana siguiente, su probabilidad, la probabilidad de cada clase y la versión del modelo. Cuando llega la semana siguiente, la misma tarea completa `direccion_real` y `acierto`. Las predicciones se acumulan, así que con el tiempo muestran el acierto del modelo en semanas que no usó para entrenar.
+1. **`gold.predicciones`**, escrita por la tarea `50_predicciones`. Una fila por semana y combustible: la dirección predicha para la semana siguiente, su probabilidad, la probabilidad de cada clase y la versión del modelo. Cuando llega la semana siguiente, la misma tarea completa `direccion_real` y `acierto`. Las predicciones se acumulan, así que con el tiempo muestran el acierto del modelo en semanas que no usó para entrenar. Es la evidencia de cómo le va al modelo con semanas nuevas.
 2. **`gold.metricas_modelo`**, escrita por `40_entrenamiento`. Una fila por versión del modelo con sus métricas, las de la línea base y si la supera.
 
 `semana` es el martes de inicio de la semana con los datos usados, y `semana_objetivo` el de la semana cuyo cambio se predice. Por ejemplo, con datos hasta el lunes 9 de noviembre de 2026, `semana` es el martes 3 y `semana_objetivo` el martes 10.
 
 La lógica está en `src/gas_price/modelo.py`, en `semana_a_predecir`, `predecir` y `fila_de_metricas`, con tests.
+
+## El modelo en la API
+
+Acordado con el catedrático el 2026-11-13: la API carga el modelo `champion` descargado de Databricks y lo empaqueta en su imagen de Docker. Para predecir usa la semana más reciente de una copia de `gold.features_modelo`, con las columnas de `features.VARIABLES`. La salida debe coincidir con la fila de esa semana en `gold.predicciones`.
+
+El modelo está guardado con cloudpickle. Para cargarlo hace falta la misma versión de scikit-learn con que se entrenó. El modelo descargado de MLflow trae un `requirements.txt` con esas versiones.

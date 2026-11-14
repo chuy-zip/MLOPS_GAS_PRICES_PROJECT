@@ -17,6 +17,8 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
+# Para scripts/exportar_para_api.py, que descarga el modelo y la copia de oro para la API.
+exportar = ["databricks-sdk>=0.30", "mlflow-skinny>=2.16", "pyarrow>=14"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

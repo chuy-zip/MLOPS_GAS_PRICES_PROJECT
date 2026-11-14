@@ -2,10 +2,8 @@
 -- Lo corre un administrador una sola vez en el SQL Editor de Databricks.
 -- Se puede volver a correr sin problema: no borra ni reemplaza nada.
 --
--- Los esquemas se crean sin ubicación administrada, así que usan el almacenamiento por defecto.
--- Cuando el catedrático habilite la escritura en los buckets, se cambia su ubicación con
--- ALTER SCHEMA ... SET MANAGED LOCATION y se recrean las tablas.
--- Ver docs/infraestructura/databricks.md.
+-- Los esquemas usan el almacenamiento por defecto de Databricks. Free Edition no permite escribir
+-- en los buckets de S3. Ver docs/infraestructura/databricks.md, sección "Decisión final".
 
 CREATE CATALOG IF NOT EXISTS equipo_01
   COMMENT 'Equipo 01. Proyecto final de MLOps: predicción del precio de la gasolina en Guatemala';
