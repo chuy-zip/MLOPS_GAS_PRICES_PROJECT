@@ -116,14 +116,20 @@ El Droplet lo provee el curso y puede ser compartido entre equipos. Según el en
 
 1. Cada equipo entra por ssh con su usuario, `equipo-01`, y sus llaves. Trabaja solo en `/home/equipo-01/` y en su puerto, `80XX`. Tocar recursos de otro equipo es falta grave.
 2. No se instalan paquetes del sistema ni se reinicia el servidor sin autorización. Todo va en el entorno aislado elegido: Docker recomendado, o conda, uv o venv.
-3. La API lee las tablas de oro desde S3 con credenciales de solo lectura, en un `.env` con permisos 600. El `.env` nunca va al repo: el repo lleva un `.env.example` sin valores.
+3. La imagen de Docker lleva el modelo `champion` y una copia de las tablas de oro, descargados de Databricks. No necesita credenciales de AWS. Si alguna vez necesita configuración secreta, va en un `.env` con permisos 600, nunca en el repo: el repo lleva un `.env.example` sin valores.
 4. El servicio sigue corriendo aunque se cierre la sesión ssh: contenedor con `restart: unless-stopped` o un servicio de `systemd`.
 
 Los endpoints y lo que lee cada uno están en [arquitectura.md](../arquitectura/arquitectura.md#servicio-en-el-droplet).
 
-**Actualizar la API.** Como la API lee oro en cada consulta, los datos nuevos aparecen solos después de cada corrida del job. Solo hay que volver a desplegar cuando cambia el código de la API.
+**Actualizar la API.** La imagen lleva una copia fija del modelo y de oro. Después de cada corrida del job que cambie algo, hay que:
 
-**Puntos extra del enunciado:** CI/CD hacia el Droplet y pruebas automatizadas de la API. Una opción es que un workflow, al hacer merge de cambios en `api/`, entre por ssh y reinicie el contenedor. Requiere guardar `DROPLET_HOST` y una llave de despliegue como secretos de GitHub, con autorización del catedrático.
+1. Descargar de nuevo el modelo `champion` y la copia de oro con `python scripts/exportar_para_api.py`. Verifica solo que el modelo descargado prediga lo mismo que Databricks.
+2. Construir la imagen y probarla en local.
+3. Subirla al Droplet y reiniciar el contenedor, a mano por ssh.
+
+Como el job corre los martes, lo natural es actualizar la API los martes después de la corrida.
+
+**Puntos extra del enunciado:** CI/CD hacia el Droplet y pruebas automatizadas de la API. Lo acordado con el catedrático es el despliegue a mano. Automatizarlo sería un extra: un workflow que descargue los artefactos, construya la imagen y entre por ssh. Requiere guardar `DROPLET_HOST`, una llave de despliegue y el token de Databricks como secretos de GitHub, con autorización del catedrático.
 
 **Notas:**
 

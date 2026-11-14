@@ -144,19 +144,17 @@ La causa es que `xloc-cusn` tiene activada la opción "Limit to read-only use". 
 
 Se le pide al catedrático desactivar "Limit to read-only use" en `xloc-cusn` y `xloc-ag`, y otorgar `CREATE MANAGED STORAGE` en las tres.
 
-## Si falta el permiso
+## Decisión final (2026-11-13)
 
-**Pedirle al catedrático** este permiso sobre las 3 ubicaciones de escritura:
+El catedrático confirmó que **Databricks Free Edition no permite escribir en un proveedor de nube externo.** Las external locations de bronce, plata y oro no se pueden habilitar para escritura.
 
-```sql
-GRANT CREATE MANAGED STORAGE ON EXTERNAL LOCATION `xloc-cusn` TO `account users`;
-GRANT CREATE MANAGED STORAGE ON EXTERNAL LOCATION `xloc-ag` TO `account users`;
-GRANT CREATE MANAGED STORAGE ON EXTERNAL LOCATION `xloc-au` TO `account users`;
-```
+Se acordó:
 
-**Mientras tanto**, los esquemas se crean sin ubicación y las tablas quedan en el almacenamiento por defecto del catálogo. El código del pipeline no cambia: las tablas se llaman igual. Cuando llegue el permiso, solo se recrean los esquemas con su ubicación y se vuelve a correr el pipeline.
+1. Las tablas viven en el almacenamiento por defecto de Databricks, en el catálogo `equipo_01`. Así funcionan desde el inicio y no cambia nada.
+2. Los buckets solo se usan para leer las fotos de `xloc-raw`.
+3. La API no lee S3. Usa el modelo y una copia de oro descargados de Databricks. Ver [arquitectura.md](../arquitectura/arquitectura.md).
 
-El permiso hace falta con cualquiera de las dos opciones de catálogo. Lo que decide dónde quedan los archivos es la ubicación del esquema, no el catálogo.
+Las pruebas y los permisos de arriba quedan como registro de lo que se intentó.
 
 ## Token para el CI
 

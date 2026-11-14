@@ -114,7 +114,7 @@ El MEM publica los precios de referencia los martes. En el Excel, el cambio apar
 | 4. Validar que los datos no empeoren | Workflow `tests.yml` | Sí |
 | 5. Correr el job `equipo-01-pipeline` | Programación de cada martes, o a mano con **Run now** | Sí |
 | 6. Recalcular oro, reentrenar el modelo y guardar la predicción de la semana siguiente | El job | Sí |
-| 7. La API muestra los datos nuevos | La API lee oro directamente | Sí |
+| 7. Descargar el modelo y la copia de oro, reconstruir la imagen de la API y subirla al Droplet | Una persona del equipo | No |
 
 **Qué es la referencia.** Es el precio oficial vigente de cada combustible: el último que publicó el MEM. Vive en `gold.referencia_actual`, y la API la usa para `/precios/actual`.
 
@@ -200,4 +200,4 @@ La técnica de extracción la elige quien trabaje las fotos. Lo que ya se sabe y
 
 1. El EXIF da la fecha, la hora y el lugar de cada foto. La fecha puede salir de ahí, como permite el enunciado.
 2. Hay más de un tipo de dispensador y la mayoría de fotos son de noche. La extracción tiene que tolerar las dos cosas.
-3. Las imágenes no salen de Databricks. La API solo lee las tablas de oro.
+3. Las imágenes no salen de Databricks. A la API solo llegan el modelo y una copia de oro.

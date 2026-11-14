@@ -23,13 +23,21 @@ flowchart LR
     RAW -- "fotos" --> JOB
     JOB --> BR --> PL --> OR
     OR <--> MLF
-    OR -- "lee oro con credenciales de solo lectura" --> DROP["Droplet DigitalOcean<br/>API, puerto 80XX"]
+    MLF -- "se descarga el modelo" --> LOCAL["Computadora<br/>API local y pruebas"]
+    OR -- "se descarga una copia de oro" --> LOCAL
+    LOCAL -- "imagen de Docker, a mano" --> DROP["Droplet DigitalOcean<br/>API, puerto 80XX"]
     USER(("Usuario")) -- "HTTP" --> DROP
     DEV(("Equipo")) -- "ssh" --> DROP
 ```
 
-1. Databricks usa los buckets por medio de las external locations que configuró el catedrático. Nadie del equipo tiene credenciales de AWS en el código.
-2. Según el enunciado, la API lee las tablas de oro desde S3 con credenciales de solo lectura, guardadas en un archivo `.env` del Droplet y nunca en el repo. Esas credenciales todavía no las tenemos: hay que pedirlas al catedrático.
+**Decisión del 2026-11-13, acordada con el catedrático.** Databricks Free Edition no permite escribir en un proveedor de nube externo, así que las external locations de bronce, plata y oro no se pueden usar para escribir. Por eso:
+
+1. **Todo el procesamiento ocurre en Databricks,** hasta el entrenamiento del modelo y la predicción.
+2. **Se descargan de Databricks** el modelo `champion` y una copia de las tablas de oro que usa la API.
+3. **La API se construye y se prueba en local,** con esos archivos dentro de su carpeta.
+4. **El modelo y los datos se empaquetan con la API** en una imagen de Docker, que se sube al Droplet a mano.
+
+Databricks solo lee los buckets: las fotos de `xloc-raw`, por su external location. Las tablas viven en el almacenamiento de Databricks. Nadie del equipo tiene credenciales de AWS.
 
 ## Jobs
 
@@ -111,21 +119,44 @@ Lo que pide el enunciado:
 
 1. **Acceso:** por ssh con el usuario `equipo-01` y las llaves asignadas. Todo el trabajo vive en `/home/equipo-01/`. No se instalan paquetes del sistema ni se reinicia el servidor.
 2. **Entorno aislado:** Docker recomendado, o conda, uv o venv. La elección se justifica en el README.
-3. **Lectura de oro:** desde S3, con `deltalake`, DuckDB, Polars o Parquet, y credenciales de solo lectura en un `.env` con permisos 600.
+3. **Datos:** la imagen lleva el modelo `champion` y una copia de las tablas de oro, descargados de Databricks. El enunciado pedía leer oro desde S3, pero Free Edition no permite escribir en S3. Ver la decisión al inicio de este documento.
 4. **Publicación:** en el puerto `80XX` del equipo, corriendo aunque se cierre la sesión ssh, con `restart: unless-stopped` o `systemd`.
 5. **Pruebas de usuario final:** una colección de `curl`, Postman o un script que muestre el precio actual y la predicción de los tres combustibles.
 
 **Endpoints mínimos,** con FastAPI o Flask, con paginación (`?limit=`) y documentación en `/docs`:
 
-| Endpoint | Lee |
+| Endpoint | Usa |
 |---|---|
 | `GET /health` | Nada. Estado del servicio |
-| `GET /precios/actual` | `gold.referencia_actual` |
-| `GET /precios?combustible=&desde=&hasta=` | `gold.precio_semanal`, con la columna `fuente` para elegir el precio oficial o el de las fotos |
-| `GET /prediccion?combustible=` | `gold.predicciones`, la fila más reciente del combustible |
-| `GET /modelo/metricas` | `gold.metricas_modelo`, la fila más reciente |
+| `GET /precios/actual` | Copia de `gold.referencia_actual` |
+| `GET /precios?combustible=&desde=&hasta=` | Copia de `gold.precio_semanal`, con la columna `fuente` para elegir el precio oficial o el de las fotos |
+| `GET /prediccion?combustible=` | **El modelo `champion`**, aplicado a la semana más reciente de la copia de `gold.features_modelo` |
+| `GET /modelo/metricas` | Copia de `gold.metricas_modelo`, la fila más reciente |
 
-Base de código: [Actividades/Actividad5/services/serving](https://github.com/SergioAle210/ML-Engineering/tree/main/Actividades/Actividad5/services/serving) del repo del curso. La API no carga el modelo: lee las predicciones que el job ya guardó en oro.
+**Qué se descarga de Databricks:**
+
+| Qué | De dónde | Para qué |
+|---|---|---|
+| Modelo | `equipo_01.gold.modelo_tendencia_precio@champion` | `/prediccion`. La API lo carga y predice |
+| `referencia_actual` | `equipo_01.gold` | `/precios/actual` |
+| `precio_semanal` | `equipo_01.gold` | `/precios` |
+| `features_modelo`, solo la semana más reciente | `equipo_01.gold` | La entrada del modelo en `/prediccion` |
+| `metricas_modelo` | `equipo_01.gold` | `/modelo/metricas` |
+
+La predicción de la API debe coincidir con la que el job guardó en `gold.predicciones`. Sirve como prueba de que el modelo empaquetado es el mismo.
+
+**El script `scripts/exportar_para_api.py` hace la descarga:**
+
+1. Consulta las tablas de oro con el SQL warehouse y las guarda como Parquet en `api/artefactos/datos/`.
+2. Descarga el modelo `champion` con MLflow en `api/artefactos/modelo/`, con su `requirements.txt`.
+3. Escribe `api/artefactos/manifiesto.json` con la versión del modelo, la fecha y las filas de cada tabla. La API lo puede mostrar en `/health`.
+4. Carga el modelo descargado, predice la semana más reciente y verifica que coincida con `gold.predicciones`.
+
+Requisitos, una sola vez por persona: la [CLI de Databricks](https://docs.databricks.com/aws/en/dev-tools/cli/install), `databricks auth login --host <url_del_workspace> --profile DEFAULT` y `pip install -e ".[exportar]"`. La carpeta `api/artefactos/` no se sube al repo: la imagen de Docker la copia al construirse. Las tablas y columnas que se descargan están en `src/gas_price/exportar.py`.
+
+**Versiones:** la librería scikit-learn de la imagen debe ser la misma que usó Databricks al entrenar. Al 2026-11-13 es `scikit-learn==1.7.2`. El modelo descargado de MLflow incluye un `requirements.txt` con las versiones exactas, y el script las imprime. Con otra versión, el modelo carga con advertencias y puede dar resultados distintos.
+
+Base de código: [Actividades/Actividad5/services/serving](https://github.com/SergioAle210/ML-Engineering/tree/main/Actividades/Actividad5/services/serving) del repo del curso.
 
 ## Estructura de carpetas
 

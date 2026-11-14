@@ -21,7 +21,7 @@ Puntos de la rúbrica y estado al 2026-11-13:
 | Capa oro: precio semanal, variación, etiqueta de dirección y comentarios | 10 | Hecho con el MEM. Las filas de fotos aparecen solas cuando `silver.precios` tenga datos |
 | Modelo: validación temporal, comparación con la línea base y MLflow | 10 | Hecho. 0.55 contra 0.46 de la línea base |
 | Clusters y job: cómputo, job encadenado, programación y alertas | 10 | Hecho, salvo confirmar con el catedrático la equivalencia con serverless |
-| API en el Droplet | 20 | Pendiente. Faltan las credenciales de solo lectura para S3 |
+| API en el Droplet | 20 | Pendiente. Acordado con el catedrático: API local con el modelo y una copia de oro, empaquetada en Docker y subida a mano |
 | Repositorio y README | 10 | Parcial. Faltan el diagrama exportado, la presentación y commits de todos |
 | Informe técnico | 5 | Pendiente |
 | Presentación y demo | 10 | Pendiente |
@@ -56,11 +56,13 @@ Puntos de la rúbrica y estado al 2026-11-13:
 | 2026-11-12 | Las tablas se definen en `databricks/sql/tablas.sql`. Las crea el job `gas_price_setup`, que el CI corre después de cada despliegue | Los bundles no tienen un recurso para tablas. Así los tipos quedan versionados, una tarea no puede cambiar una tabla en silencio y la estructura se aplica al hacer merge, separada del procesamiento de datos |
 | 2026-11-11 | El Droplet no se administra desde el proyecto. Una persona del equipo tiene acceso por ssh con sudo | El Droplet lo provee el curso |
 | 2026-11-13 | Se adopta el enunciado oficial. Las fotos son la fuente principal. El MEM y la EIA quedan como fuentes complementarias | El enunciado lo define así y permite fuentes complementarias para la historia del modelo |
-| 2026-11-13 | Nombres según la convención del enunciado: catálogo `equipo_01`, jobs `equipo-01-*`, repo `equipo-01-gasolina-gt` y prefijo `equipo-01/` en los buckets | El enunciado los pide como entregables con nombre fijo |
+| 2026-11-13 | Nombres según la convención del enunciado: catálogo `equipo_01`, jobs `equipo-01-*`, repo `equipo-01-gasolina-gt` | El enunciado los pide como entregables con nombre fijo |
 | 2026-11-13 | La etiqueta "igual" pasa a llamarse `se_mantiene` | Es el nombre del enunciado |
 | 2026-11-13 | Nombres de columnas y tablas del enunciado: `_ingestion_timestamp`, `_source_file`, `precio_q_galon` decimal, `features_modelo`. Las semanas se identifican por su martes de inicio | Coincidir con el enunciado y con el ejemplo de su API |
 | 2026-11-13 | `gold.precio_semanal` combina el MEM y las fotos, con una columna `fuente`. La EIA no entra | Con 110 fotos la mayoría de semanas quedaría vacía. La EIA está en dólares y no es un precio local |
-| 2026-11-13 | La API lee oro directamente. El job guarda la predicción en `gold.predicciones` y las métricas en `gold.metricas_modelo`. La tarea 50 deja de publicar un archivo y pasa a predecir | El enunciado pide que la API lea oro. Así la API no carga el modelo |
+| 2026-11-13 | El job guarda la predicción en `gold.predicciones` y las métricas en `gold.metricas_modelo`. La tarea 50 deja de publicar un archivo y pasa a predecir | Deja la predicción y su acierto registrados en oro |
+| 2026-11-13 | **Todo vive en Databricks.** Las tablas quedan en el almacenamiento por defecto. Se cancela la migración a los buckets | Free Edition no permite escribir en un proveedor de nube externo. Acordado con el catedrático |
+| 2026-11-13 | **La API se construye en local** con el modelo `champion` y una copia de oro descargados de Databricks, se empaqueta en Docker y se sube al Droplet a mano | Acordado con el catedrático. Sin escritura en S3, la API no puede leer oro desde ahí |
 | 2026-11-13 | El job corre cada martes a las 8:00 y avisa por correo si falla | El enunciado pide programación o disparo por fotos, y una alerta. El MEM publica los martes |
 | 2026-11-13 | El job mantiene una tarea por fuente y por paso, en lugar de 3 tareas | Sigue el orden bronce, plata y oro. Cada tarea se prueba por separado. Se confirma con el catedrático |
 
@@ -70,7 +72,6 @@ Puntos de la rúbrica y estado al 2026-11-13:
 |---|---|---|
 | Técnica para extraer el precio de las fotos | OCR o modelo de visión, a elección de quien trabaje las fotos. Tesseract no se puede instalar en serverless | [fuentes_de_datos.md](../datos/fuentes_de_datos.md) |
 | Equivalencia entre los clusters del enunciado y serverless | Confirmar con el catedrático | [databricks.md](../infraestructura/databricks.md) |
-| Credenciales de solo lectura para que la API lea oro desde S3 | Pedirlas al catedrático | [ci_cd.md](../infraestructura/ci_cd.md) |
 | Ubicación de las fotos nuevas | El enunciado menciona `fotos/AAAA-MM-DD/` en el bucket de bronce. Las 110 actuales están en `xloc-raw`. Confirmar con el catedrático | [fuentes_de_datos.md](../datos/fuentes_de_datos.md) |
 
 ## Fases y tareas
@@ -79,8 +80,7 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 
 | Fase | Tarea | Responsable | Estado |
 |---|---|---|---|
-| 0 | Pedir al catedrático desactivar "Limit to read-only use" en bronce y plata, y otorgar `CREATE MANAGED STORAGE` en bronce, plata y oro | Ricardo | Pendiente |
-| 0 | Mover las tablas a los buckets cuando lleguen los permisos | Ricardo | Pendiente |
+| 0 | Pedir al catedrático escritura en los buckets | Ricardo | Hecho: Free Edition no lo permite. Todo queda en Databricks |
 | 1 | Acceso ssh al Droplet verificado | | Pendiente |
 | 1 | `bronze.fotos_precios` con carga incremental y columnas de auditoría | | Pendiente |
 | 2 | Extracción de precios y `silver.precios` con 3 reglas de calidad | | Pendiente |
@@ -93,7 +93,9 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 | 3 | `gold.precio_semanal` y `gold.variacion_semanal` | Ricardo | Hecho con el MEM. Las fotos se suman solas |
 | 3 | Tablas de fotos del enunciado definidas en `tablas.sql`: `bronze.fotos_precios`, `silver.precios` y `silver.precios_rejected` | Ricardo | Hecho. Vacías, las llena el equipo de fotos |
 | 3 | Evidencia de al menos 2 corridas exitosas con fotos de semanas distintas | | Pendiente |
-| 4 | API con los endpoints del enunciado en el puerto del equipo | | Pendiente |
+| 4 | Script que descarga el modelo `champion` y la copia de oro: `scripts/exportar_para_api.py` | Ricardo | Hecho y probado contra Databricks el 2026-11-13. Verificó que el modelo descargado predice lo mismo que `gold.predicciones` |
+| 4 | API local con los endpoints del enunciado, con el modelo empaquetado | | Pendiente |
+| 4 | Imagen de Docker subida al Droplet, en el puerto del equipo | | Pendiente |
 | 4 | Pruebas de usuario final con `curl` o Postman | | Pendiente |
 | 5 | Diagrama de arquitectura exportado y su fuente editable | | Pendiente |
 | 5 | Informe técnico de máximo 5 páginas | | Pendiente |
@@ -102,10 +104,10 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 
 ## Riesgos
 
-1. Puede que el catedrático no otorgue `CREATE MANAGED STORAGE`. En ese caso las tablas quedan en el almacenamiento por defecto y el código no cambia.
+1. La API lleva una copia fija de oro. Si nadie la actualiza después de cada corrida, muestra datos de semanas anteriores.
 2. Free Edition tiene cuotas de uso y un máximo de 5 tareas de job a la vez. Con varios desarrolladores probando al mismo tiempo, el cómputo puede apagarse el resto del día.
 3. Bronce y plata de fotos valen 25 puntos y todavía no empiezan. Es la parte con más peso pendiente.
-4. Sin credenciales de S3 para el Droplet, la API no puede leer oro como pide el enunciado.
+4. La versión de scikit-learn de la API tiene que coincidir con la de Databricks, o el modelo no carga.
 
 ## Bitácora
 
@@ -122,4 +124,5 @@ Las fases siguen el calendario del enunciado. Las tareas hechas antes del 2026-1
 | 2026-11-12 | Se confirmó que las fotos del bucket son las originales. Los colores raros venían del modo oscuro de Databricks, que invierte las salidas de `displayHTML`. Se documentó en las lecciones aprendidas |
 | 2026-11-12 | El job completo corre en unos 2 minutos. Modelo registrado con balanced accuracy de 0.55 contra 0.46 de la línea base. Tablas definidas en un DDL versionado |
 | 2026-11-13 | Se recibió el enunciado oficial. Se alinearon nombres, etiqueta, predicciones, métricas, programación, alertas y documentación |
+| 2026-11-13 | El catedrático confirmó que Free Edition no permite escribir en S3. Todo queda en Databricks y la API se empaqueta con el modelo |
 | 2026-11-13 | El repo pasó a llamarse `equipo-01-gasolina-gt`. El job corrió completo en `equipo_01`: 0.551 contra 0.458 de la línea base. Se borró el catálogo `gas_price` |

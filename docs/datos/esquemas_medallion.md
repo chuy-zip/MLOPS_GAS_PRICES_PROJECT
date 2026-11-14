@@ -2,37 +2,34 @@
 
 ## Qué va en cada capa
 
-| Capa | External location | Qué guarda | Quién escribe |
+| Capa | Dónde vive | Qué guarda | Quién escribe |
 |---|---|---|---|
-| Raw | xloc-raw | Las fotos tal como las dejó el catedrático | Nadie del equipo. Es solo de lectura |
-| Bronce | xloc-cusn | Los datos de raw y del Excel como tablas, sin interpretar. También la copia del Excel que viene del repo | Tareas de ingesta |
-| Plata | xloc-ag | Datos interpretados, validados y con un esquema común | Tareas de limpieza |
-| Oro | xloc-au | Series diarias completas, variables del modelo, referencia vigente y el modelo | Tareas de agregación y entrenamiento |
+| Raw | Bucket de `xloc-raw` | Las fotos tal como las dejó el catedrático | Nadie del equipo. Es solo de lectura |
+| Bronce | Databricks, esquema `equipo_01.bronze` | Las fotos, el Excel del MEM y la EIA como tablas, sin interpretar. También las copias de los archivos | Tareas de ingesta |
+| Plata | Databricks, esquema `equipo_01.silver` | Datos interpretados, validados y con un esquema común | Tareas de limpieza |
+| Oro | Databricks, esquema `equipo_01.gold` | Tablas semanales, variables, predicciones, métricas y el modelo | Tareas de agregación y entrenamiento |
+
+**Por qué no en los buckets.** El enunciado pone cada capa en su bucket de S3, pero Databricks Free Edition no permite escribir en un proveedor de nube externo. El 2026-11-13 se acordó con el catedrático trabajar todo dentro de Databricks. Los buckets solo se usan para leer las fotos.
 
 **Raw contra bronce.** Raw es la zona de aterrizaje de los archivos originales y nunca se modifica. Bronce guarda esos mismos datos como tablas Delta, sin limpiarlos, más columnas de control: cuándo se cargaron, de qué archivo vienen y su hash. Si una regla de limpieza cambia, plata y oro se reconstruyen desde bronce sin volver a leer todo raw.
 
-**Nombres.** Los buckets tienen nombres de metales y no se pueden renombrar. El estándar se pone en Unity Catalog. La tabla de arriba es el mapeo.
-
-**Convención del enunciado.** Cada equipo usa un catálogo o esquemas con el prefijo `equipo_XX`, y en cada bucket escribe solo dentro de su prefijo `equipo-XX/`. Para este equipo: catálogo `equipo_01` y prefijo `equipo-01/`.
+**Convención del enunciado.** Cada equipo usa un catálogo o esquemas con el prefijo `equipo_XX`. Para este equipo: catálogo `equipo_01`.
 
 ## Organización en Unity Catalog
 
-Un esquema por capa. Cada esquema usa su bucket como ubicación administrada, así sus tablas quedan físicamente en ese bucket. Un esquema solo puede tener una ubicación, por eso hay uno por capa. Los conceptos y los permisos están explicados en [databricks.md](../infraestructura/databricks.md).
+Un esquema por capa, en el almacenamiento por defecto de Databricks. Los conceptos y los permisos están explicados en [databricks.md](../infraestructura/databricks.md).
 
 **Catálogo propio `equipo_01`.** Sigue la convención del enunciado, separa el proyecto del resto del workspace y permite dar permisos al catálogo completo. Lo crea `infra/sql/00_unity_catalog.sql`. Hasta el 2026-11-13 el catálogo se llamaba `gas_price`.
 
-| Esquema | Ubicación administrada | Contenido |
-|---|---|---|
-| `equipo_01.bronze` | xloc-cusn, prefijo `equipo-01/` | Tablas de bronce y el volumen `archivos` |
-| `equipo_01.silver` | xloc-ag, prefijo `equipo-01/` | Tablas de plata |
-| `equipo_01.gold` | xloc-au, prefijo `equipo-01/` | Tablas de oro y el modelo |
+| Esquema | Contenido |
+|---|---|
+| `equipo_01.bronze` | Tablas de bronce y el volumen `archivos` |
+| `equipo_01.silver` | Tablas de plata |
+| `equipo_01.gold` | Tablas de oro y el modelo |
 
-1. Raw no tiene esquema. Las fotos se leen por ruta.
-2. El volumen administrado `archivos` del esquema de bronce guarda la copia del Excel que viene del repo y los checkpoints de Auto Loader.
-3. Guardar las tablas en los buckets requiere `CREATE MANAGED STORAGE` sobre las external locations de bronce, plata y oro.
-4. **Estado actual:** `xloc-cusn` y `xloc-ag` son de solo lectura. Solo `xloc-au` permite escritura. Se pidió al catedrático habilitar la escritura en bronce y plata.
-5. **Mientras tanto:** los tres esquemas se crean sin ubicación y usan el almacenamiento por defecto. Cuando llegue el permiso, se cambia su ubicación con `ALTER SCHEMA ... SET MANAGED LOCATION`, se recrean las tablas y se vuelve a correr el pipeline.
-6. El catálogo y los nombres de los esquemas son parámetros del bundle. Cambiarlos no requiere cambiar los notebooks.
+1. Raw no tiene esquema. Las fotos se leen por ruta, por la external location `xloc-raw`.
+2. El volumen administrado `archivos` del esquema de bronce guarda la copia del Excel y de la EIA que vienen del repo, y los checkpoints de Auto Loader.
+3. El catálogo y los nombres de los esquemas son parámetros del bundle. Cambiarlos no requiere cambiar los notebooks.
 
 En el resto de los documentos, `bronze.tabla` abrevia la tabla en el esquema de bronce, y lo mismo para plata y oro.
 

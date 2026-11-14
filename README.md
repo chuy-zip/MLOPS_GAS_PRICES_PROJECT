@@ -2,7 +2,7 @@
 
 Proyecto final de MLOps, Equipo 01: predicción del precio de la gasolina en Guatemala.
 
-Un pipeline de punta a punta en Databricks convierte fotos de precios y datos oficiales en tablas Delta con la arquitectura medallón. Con eso predice si el precio de la gasolina súper, regular y el diésel subirá, bajará o se mantendrá la semana siguiente. Una API en un Droplet de DigitalOcean publica los precios y las predicciones de la capa de oro.
+Un pipeline de punta a punta en Databricks convierte fotos de precios y datos oficiales en tablas Delta con la arquitectura medallón. Con eso predice si el precio de la gasolina súper, regular y el diésel subirá, bajará o se mantendrá la semana siguiente. Una API en un Droplet de DigitalOcean, empaquetada con el modelo, publica los precios y las predicciones.
 
 El enunciado oficial está en [docs/contexto/](docs/contexto/). Toda la documentación está en [docs/](docs/README.md), y el punto de partida es el [plan de implementación](docs/plan/plan_implementacion.md).
 
@@ -19,13 +19,14 @@ flowchart LR
     B --> P["Plata"] --> O["Oro"]
     O --> M["Modelo en MLflow"]
     M --> O
-    O --> API["API en el Droplet"]
+    M -- "se descarga" --> API["API en Docker<br/>Droplet"]
+    O -- "copia de oro" --> API
 ```
 
-1. **Fuente principal: las fotos de precios** que comparte el catedrático. Se leen desde S3 por una external location y se convierten en precios estructurados.
+1. **Fuente principal: las fotos de precios** que comparte el catedrático. Databricks las lee desde S3 por una external location y las convierte en precios estructurados. Las tablas viven en Databricks, porque Free Edition no permite escribir en S3.
 2. **Fuentes complementarias,** que el enunciado permite para tener más historia: el Excel de precios del MEM, desde 2013, y el precio internacional de la gasolina y el diésel publicado por la EIA. Se versionan en `data/` y cada cambio pasa un test de "no empeorar".
 3. **El job `equipo-01-pipeline`** lleva los datos de bronce a oro, entrena el modelo, lo registra en MLflow y guarda la predicción de la semana siguiente en `gold.predicciones`. Corre cada martes y avisa por correo si falla.
-4. **La API** lee las tablas de oro y responde con los precios, la predicción y las métricas del modelo.
+4. **La API** se construye y se prueba en local con el modelo `champion` y una copia de las tablas de oro, descargados de Databricks. Se empaqueta en Docker y se sube al Droplet a mano.
 
 ## Estructura
 
@@ -36,7 +37,7 @@ flowchart LR
 | `databricks/sql/tablas.sql` | Columnas, tipos y comentarios de todas las tablas. Para cambiar una tabla, ver [Cómo cambiar una tabla](docs/datos/esquemas_medallion.md#cómo-cambiar-una-tabla) |
 | `src/gas_price/` | Código compartido: lectores del MEM y la EIA, variables, modelo y predicción |
 | `tests/` | Tests del paquete, de "no empeorar" los datos y de la definición de las tablas |
-| `scripts/` | Actualizar la EIA y evaluar el modelo en local |
+| `scripts/` | Actualizar la EIA, evaluar el modelo en local y descargar el modelo y la copia de oro para la API |
 | `data/` | Excel del MEM y archivos de la EIA |
 | `infra/sql/` | Catálogo, esquemas y volumen de Unity Catalog |
 | `.github/workflows/` | Plan del bundle y tests en cada PR. Despliegue y creación de tablas al hacer merge |
@@ -68,6 +69,7 @@ pip install -e ".[test]"
 | `pytest` | Correr los tests |
 | `python scripts/evaluar_modelo.py` | Evaluar el modelo contra la línea base con los datos de `data/` |
 | `python scripts/actualizar_eia.py` | Descargar los precios nuevos de la EIA |
+| `python scripts/exportar_para_api.py` | Descargar de Databricks el modelo `champion` y la copia de oro a `api/artefactos/`. Requiere `pip install -e ".[exportar]"` y haber iniciado sesión con la CLI de Databricks |
 
 ## Actualizar los datos
 
@@ -78,6 +80,7 @@ Cada lunes, antes de que el job corra el martes:
 3. Correr `python scripts/actualizar_eia.py`.
 4. Abrir un pull request. Los checks `plan` y `tests` tienen que pasar.
 5. Hacer merge. El job del martes carga los datos nuevos. Para cargarlos antes, correr `equipo-01-pipeline` con **Run now**.
+6. Después de la corrida, actualizar la API: correr `python scripts/exportar_para_api.py`, reconstruir la imagen y subirla al Droplet. Ver [ci_cd.md](docs/infraestructura/ci_cd.md#despliegue-de-la-api-en-el-droplet).
 
 Detalle en [fuentes_de_datos.md](docs/datos/fuentes_de_datos.md#ciclo-semanal-de-actualización).
 
